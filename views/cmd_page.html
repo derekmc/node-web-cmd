@@ -1,0 +1,72 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title> <%= title %> </title>
+    <style>
+      * {
+        font-family: monospace;
+        color: #000;
+background: #fff;
+     }
+    </style>
+    <script>
+      var hist_rows = [];
+      var hist_index = -1; // hist indexes are negative, 0 is empty line.
+      function init(){
+        var app_name = document.getElementById("app_name").value;
+        var hist = document.getElementById(app_name.length? "app_hist" : "cmd_hist").value;
+        hist_rows = hist.split("\n");
+        console.log("hist_rows", hist_rows);
+        var cmd_text = document.getElementById("cmd_text");
+        cmd_text.addEventListener("keydown", keyDown);
+      }
+      function editHistRow(){
+        var cmd_text = document.getElementById("cmd_text");
+        var i = hist_index + hist_rows.length;
+        if(i >= 0  && hist_index < 0){
+          cmd_text.value = hist_rows[i]; }
+      }
+      function upHist(){
+        console.log('upHist');
+        if(hist_index + hist_rows.length > 0){
+          --hist_index; }
+        console.log('hist_index', hist_index);
+        editHistRow();
+      }
+      function downHist(){
+        console.log('downHist');
+        if(hist_index < -1){
+          ++hist_index; }
+        console.log('hist_index', hist_index);
+        editHistRow();
+      }
+      function keyDown(e){
+        var code = e.keyCode;
+        if(code == 38) upHist();
+        if(code == 40) downHist();
+      }
+      window.addEventListener("load", init);
+    </script>
+  </head>
+  <body>
+    <form method="POST">
+      <textarea name="cmd_out"
+                rows="<%= row_count %>"
+                cols="<%= col_count %>"
+                readonly style="overflow: auto; white-space: pre;"><%= cmd_out %>
+      </textarea>
+	  <!-- TODO: populate these values -->
+      <input type="hidden" name="cmd_hist" id="cmd_hist" value="help" />
+      <input type="hidden" name="app_hist" id="app_hist" value="" />
+      <input type="hidden" name="app_name" id="app_name" value="" />
+      <input type="hidden" name="app_state" id="app_state" value="" />
+      <input type="hidden" name="dark_mode" id="dark_mode" value="0" />
+            <br>
+            <input type="text" size="<% print(col_count - 14); %>" name="cmd_text" id="cmd_text"
+             autofocus autocomplete="off" value=""/>
+      <button type="submit">Run</button>
+      <a href=""><button type="button">Reset</button></a>
+    </form>
+  </body>
+</html>

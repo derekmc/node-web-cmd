@@ -1,0 +1,13 @@
+{
+  "name": "web-cmd",
+  "version": "1.0.0",
+  "description": "webapps with a command line interface",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "dependencies": {
+    "lodash": "^4.17.15"
+  }
+}

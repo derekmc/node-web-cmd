@@ -6,7 +6,10 @@ let template = require('lodash')._.template;
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
 const NEW_CONTEXT = "\n==NEW CONTEXT==\n";
-const CONFIG_VARS = ['darkmode', 'rowcount', 'colcount'];
+
+// config is a whitespace separated list of tuples
+const DEFAULT_CONFIG = parseConfig(
+    "rowcount 19 colcount 54 darkmode 0");
 
 // second map overwrites first.
 function mergeMap(a, b){
@@ -18,6 +21,8 @@ function mergeMap(a, b){
     return result;
 }
 
+// config is a whitespace separated list of tuples
+// "property1 value1 property2 value2"
 function parseConfig(config_str){
     let array = config_str.split(/\s+/);
     let result = {};
@@ -28,6 +33,7 @@ function parseConfig(config_str){
     }
     return result;
 }
+
 
 function dumpConfig(config){
     let result_array = [];
@@ -52,10 +58,10 @@ function parseHist(hist_str){
 
 function dumpHist(hist){
     let result_array = [];
-    console.log('hist', hist);
+    // console.log('hist', hist);
     if(!hist) return "";
     for(let i=0; i<hist.length; ++i){
-        console.log('hist[i]', hist[i]);
+        // console.log('hist[i]', hist[i]);
         result_array.push(hist[i].join("\n"));
     }
     return result_array.join(NEW_CONTEXT) + "\n";
@@ -64,15 +70,14 @@ function dumpHist(hist){
 let server = http.createServer(function(request, response){
     let data  = {
         "title": "This is the title!!!!!",
-        "config" : "rowcount 19 colcount 80 darkmode 1",
+        "config" : dumpConfig(DEFAULT_CONFIG),
         "cmd_out" : "buffer data",
         "cmd_hist" : "help",
     }
     let config = parseConfig(data.config);
     let cmd_out = "";
     let cmd_hist = parseHist(data.cmd_hist); // TODO a stack of cmd_hist contexts.
-    console.log('cmd_hist', cmd_hist);
-
+    // console.log('cmd_hist', cmd_hist);
     // console.log('config', config);
 
     if(request.method == "GET"){
@@ -90,6 +95,7 @@ let server = http.createServer(function(request, response){
         });
 		request.on('end', function(){
             let formData = qs.parse(requestBody);
+            let cmd_text = "";
             // handle form data to modify local variables and 
             if(formData.config){
                 let post_config = parseConfig(config_str);
@@ -101,15 +107,25 @@ let server = http.createServer(function(request, response){
             if(formData.cmd_hist){
                 cmd_hist = parseHist(formData.cmd_hist);
             }
-
-            // TODO replace test values with command callback processing.
-            cmd_out += "\nTesting output message only.";
-            if(cmd_hist && cmd_hist.length > 0){
-                cmd_hist[cmd_hist.length - 1].push( "demo-test-command added to history for testing.");
+            if(formData.cmd_text){
+                cmd_text = formData.cmd_text;
+                if(cmd_text.length){
+                    if(!cmd_hist){
+                        cmd_hist = [[]]; }
+                    if(!cmd_hist.length){
+                        cmd_hist.push([]); }
+                    cmd_hist[cmd_hist.length - 1].push(cmd_text);
+                }
             }
 
-            console.log('config', config);
-            console.log('data', data);
+            // TODO replace test values with command callback processing.
+            cmd_out += `\n> ${cmd_text}\n TODO process commands.`;
+            // if(cmd_hist && cmd_hist.length > 0){
+            //    cmd_hist[cmd_hist.length - 1].push( "demo-test-command added to history for testing.");
+            // }
+
+            // console.log('config', config);
+            // console.log('data', data);
             mainPage();
         });
     }
@@ -120,10 +136,11 @@ let server = http.createServer(function(request, response){
         data.config = dumpConfig(config);
 
         // add config vars to rendering data context.
-        for(let i=0; i<CONFIG_VARS.length; ++i){
-            let key = CONFIG_VARS[i];
+        for(let key in DEFAULT_CONFIG){
             if(key in config){
                 data[key] = config[key]; }
+            else{
+                data[key] = DEFAULT_CONFIG[key]; }
         }
 
         if(config.darkmode){

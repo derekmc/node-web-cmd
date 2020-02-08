@@ -3,7 +3,7 @@ _See also: php-web-cmd._
 
 Interactive online command line in browser.
 
-Most webapps, are simply a limited, permissioned or controlled way to edit a database.
+Most webapps, are simply a limited, permissioned, or controlled way to edit a database.
 All the forms and menus and popups and navigation, are just workflows for editing
 a database in a specific way(you could say this about all computing tasks honestly,
 it's just editing data in a controlled way).

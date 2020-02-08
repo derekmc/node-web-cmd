@@ -4,11 +4,15 @@ _See also: php-web-cmd._
 Interactive online command line in browser.
 
 Most webapps, are simply a limited, permissioned or controlled way to edit a database.
-The entire user inter
+All the forms and menus and popups and navigation, are just workflows for editing
+a database in a specific way(you could say this about all computing tasks honestly,
+it's just editing data in a controlled way).
 
 To dramatically simplify the development of such webapps,
-we create a framework for providing a minimal but highly
-usable command line UI, and then the framework handles the tricky parts:
+node-web-cmd provides a framework for building minimal but highly
+usable webapps with an in-browser command line UI.  The app developer
+simply needs to implement a callback for each action or command,
+and then the framework handles the tricky parts:
 
  * Virtual terminal in-brower interface.
  * Command history.

@@ -1,7 +1,7 @@
 # node-web-cmd
 _See also: php-web-cmd._
 
-Interactive online command line in browser.
+Easily create webapps using a minimal command line interface that runs in-browser over the 'net.
 
 Most webapps, are simply a limited, permissioned, or controlled way to edit a database.
 All the forms and menus and popups and navigation, are just workflows for editing

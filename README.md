@@ -21,6 +21,7 @@ and then the framework handles the tricky parts:
  * Http stuff like POST requests.
  * Saving state to a database or storing state in the browser as a hidden input.
 
+### Easy stuff (this is what you write).
 To write a webcall action, you implement a simple command callback function that accepts a list of
 text arguments, a 'puts' function for writing output, and optionally a state argument.
 

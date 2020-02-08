@@ -49,6 +49,7 @@ commands directly usable by client webapps that handle direct POST requests.
 
 
 ## TODO use [revision-db](https://github.com/derekmc/revision-db) for writing more involved webapps.
+```javascript
 function advancedCallback(args, puts, db){
     if(args[0] == 'usermod'){
         let user = args[1];
@@ -58,3 +59,4 @@ function advancedCallback(args, puts, db){
         })
     }
 }
+```

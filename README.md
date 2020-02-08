@@ -14,6 +14,7 @@ usable webapps with an in-browser command line UI.  The app developer
 simply needs to implement a callback for each action or command,
 and then the framework handles the tricky parts:
 
+### Tricky Stuff (automatically handled by the framework):
  * Virtual terminal in-brower interface.
  * Command history.
  * Command output.

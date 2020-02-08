@@ -1,2 +1,4 @@
-parse commands, and command callbacks -- 20.02.07 21:12
+parse commands -- 20.02.07 21:12
+command callbacks -- 20.02.07 21:12
 
+## parse and handle form history and config -- 20.02.07 21:12 | 20.02.07 22:44 =

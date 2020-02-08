@@ -6,8 +6,8 @@
     <style>
       * {
         font-family: monospace;
-        color: #000;
-        background: #fff;
+        color: <%= foreground %>;
+        background: <%= background %>;
      }
     </style>
     <script>
@@ -56,12 +56,11 @@
                 cols="<%= col_count %>"
                 readonly style="overflow: auto; white-space: pre;"><%= cmd_out %>
       </textarea>
-      <!-- TODO: populate these values -->
+      <!-- TODO: populate these values with template data -->
       <input type="hidden" name="cmd_hist" id="cmd_hist" value="help" />
-      <input type="hidden" name="app_hist" id="app_hist" value="" />
       <input type="hidden" name="app_name" id="app_name" value="" />
       <input type="hidden" name="app_state" id="app_state" value="" />
-      <input type="hidden" name="dark_mode" id="dark_mode" value="0" />
+      <input type="hidden" name="dark_mode" id="dark_mode" value="<%= dark_mode %>" />
             <br>
             <input type="text" size="<% print(col_count - 14); %>" name="cmd_text" id="cmd_text"
              autofocus autocomplete="off" value=""/>

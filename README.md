@@ -1,13 +1,22 @@
 # node-web-cmd
+_See also: php-web-cmd._
+
 Interactive online command line in browser.
 
 Most webapps, are simply a limited, permissioned or controlled way to edit a database.
+The entire user inter
 
-To dramatically simplify such webapp develop node-web-cmd(see also: php-web-cmd),
-this project handles all the http stuff, saving of state, and command parsing, so writing 
-a webapp is as easy as writing simple command line utilities, if not easier.
+To dramatically simplify the development of such webapps,
+we create a framework for providing a minimal but highly
+usable command line UI, and then the framework handles the tricky parts:
 
-To write a webcall, you simply implement a command callback function that accepts a list of
+ * Virtual terminal in-brower interface.
+ * Command history.
+ * Command output.
+ * Http stuff like POST requests.
+ * Saving state to a database or storing state in the browser as a hidden input.
+
+To write a webcall action, you implement a simple command callback function that accepts a list of
 text arguments, a 'puts' function for writing output, and optionally a state argument.
 
 

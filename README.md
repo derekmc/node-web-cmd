@@ -46,3 +46,15 @@ Normally, the result is then added to the virtual terminal page in the users bro
 
 However, there will also be an options to render a raw text result.  This will make the same
 commands directly usable by client webapps that handle direct POST requests.
+
+
+## TODO use [revision-db](https://github.com/derekmc/revision-db) for writing more involved webapps.
+function advancedCallback(args, puts, db){
+    if(args[0] == 'usermod'){
+        let user = args[1];
+        db.getAll('user|' + user, function(kvr){
+           db.setAll('user|' + user, function(){
+           })
+        })
+    }
+}

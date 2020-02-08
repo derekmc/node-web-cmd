@@ -6,7 +6,7 @@ let template = require('lodash')._.template;
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
 const NEW_CONTEXT = "\n==NEW CONTEXT==\n";
-const CONFIG_VARS = ['dark_mode', 'row_count', 'col_count'];
+const CONFIG_VARS = ['darkmode', 'rowcount', 'colcount'];
 
 // second map overwrites first.
 function mergeMap(a, b){
@@ -40,13 +40,14 @@ function dumpConfig(config){
 }
 
 function parseHist(hist_str){
-    let ctx_array = hist_str.split(NEW_CONTEXT);
+    let ctx_array = hist_str.trim().split(NEW_CONTEXT);
     let result = [];
     for(let i=0; i<ctx_array.length; ++i){
         let ctx_str = ctx_array[i];
-        let hist_lines = ctx_str.split("\n");
+        let hist_lines = ctx_str.split("\n\s*");
         result.push(hist_lines);
     }
+    return result;
 }
 
 function dumpHist(hist){
@@ -57,19 +58,20 @@ function dumpHist(hist){
         console.log('hist[i]', hist[i]);
         result_array.push(hist[i].join("\n"));
     }
-    return result_array.join(NEW_CONTEXT);
+    return result_array.join(NEW_CONTEXT) + "\n";
 }
 
 let server = http.createServer(function(request, response){
     let data  = {
         "title": "This is the title!!!!!",
-        "config" : "row_count 19 col_count 20 dark_mode 1",
+        "config" : "rowcount 19 colcount 80 darkmode 1",
         "cmd_out" : "buffer data",
-        //"cmd_hist"
+        "cmd_hist" : "help",
     }
     let config = parseConfig(data.config);
     let cmd_out = "";
-    let cmd_hist = []; // TODO a stack of cmd_hist contexts.
+    let cmd_hist = parseHist(data.cmd_hist); // TODO a stack of cmd_hist contexts.
+    console.log('cmd_hist', cmd_hist);
 
     // console.log('config', config);
 
@@ -124,7 +126,7 @@ let server = http.createServer(function(request, response){
                 data[key] = config[key]; }
         }
 
-        if(config.dark_mode){
+        if(config.darkmode){
             data.background = '#000';
             data.foreground = '#fff';
         } else {

@@ -1,3 +1,4 @@
+// TODO sanitize all fields, right now injection attacks are possible.
 
 let http = require('http');
 let fs = require('fs');
@@ -32,31 +33,35 @@ helpMessages.config =
   " Example: \"config darkmode true\"\n" +
   " Type 'config' with no arguments to see current config.\n";
 
-commands.config = function(args, puts, state){
+// commands modify state in place, apps do not.
+commands.config = function(state, args, puts){
     if(args.length == 1){
-        puts(" Configuration: " + dumpConfig(state.config));
-        return null; }
+        let index = 0;
+        for(var k in state.config){
+            puts(k + " " + state.config[k]); }
+        return; }
     let config_str = args.slice(1).join(" ");
     if(!config_regex.test(config_str)){
-        puts(" 'config' only allows alphanumeric values.");
+        puts("'config' only allows alphanumeric values.");
         return; }
     let change_config = parseConfig(config_str);
     state.config = mergeMap(state.config, change_config);
-    puts(" config changes: " + dumpConfig(change_config));
-    return state;
+    puts("config changes:");
+    for(let k in change_config){
+        puts(" " + k + " " + change_config[k]); }
 }
 
 helpMessages.help = "Show help for a command. Example: \"help config\".";
 
-commands.help = function(args, puts, state){
+commands.help = function(state, args, puts){
     if(args.length == 1){
         args.push('help'); }
     for(var i=1; i<args.length; ++i){
         let cmd = args[i];
         if(cmd in helpMessages){
-            puts(' ' + cmd + ": " + helpMessages[cmd]); }
+            puts(cmd + ": " + helpMessages[cmd]); }
         else{
-            puts(" No help for '" + cmd + "'."); }
+            puts("No help for '" + cmd + "'."); }
     }
 }
 
@@ -149,7 +154,7 @@ let server = http.createServer(function(request, response){
             let cmd_text = "";
             // handle form data to modify local variables and 
             if(formData.config){
-                let post_config = parseConfig(config_str);
+                let post_config = parseConfig(formData.config);
                 data.config = mergeMap(data.config, post_config);
             }
             if(formData.cmd_out){
@@ -189,12 +194,13 @@ let server = http.createServer(function(request, response){
         // TODO
     }
     function handleCommand(cmd_text, puts, data){
+        if(!cmd_text) cmd_text = "";
         puts("> " + cmd_text);
         let args = cmd_text.split(/\s+/);
         if(!args.length) return;
         let cmd = args[0];
         if(cmd in commands){
-            commands[cmd](args, puts, data); }
+            commands[cmd](data, args, function(s){ puts(" " + s); }); }
         else{
             puts(" Unknown command: '" + cmd + "'"); }
     }
@@ -203,7 +209,11 @@ let server = http.createServer(function(request, response){
         let template_data = {};
 
         template_data.title = data.title;
-        template_data.cmd_out = data.cmd_out.split("\n").slice(0, data.config.rowcount-1).join("\n");
+        let cmd_out_lines = data.cmd_out.split("\n");
+        if(cmd_out_lines.length >= data.config.rowcount){
+            cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - data.config.rowcount);
+        }
+        template_data.cmd_out = cmd_out_lines.join("\n");
         // console.log('cmd_hist', data.cmd_hist);
         template_data.cmd_hist = dumpHist(data.cmd_hist);
         template_data.config = dumpConfig(data.config);

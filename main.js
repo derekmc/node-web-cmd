@@ -1,4 +1,3 @@
-// TODO sanitize all fields, right now injection attacks are possible.
 
 let http = require('http');
 let fs = require('fs');
@@ -15,6 +14,17 @@ const config_regex = /^[A-Za-z0-9 ]*$/;
 // config is a whitespace separated list of tuples
 const DEFAULT_CONFIG = "rowcount 19 colcount 54 darkmode false";
 const DEFAULT_HIST = "help";
+
+// sanitize all fields
+// TODO make sure this sanitization is sufficient.
+function escapeHtml(unsafe) {
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/\"/g, "&quot;")
+         .replace(/\'/g, "&#039;");
+}
 
 // Commands are just apps that operate on the global state context,
 // and not a localized state.
@@ -151,6 +161,11 @@ let server = http.createServer(function(request, response){
         });
 		request.on('end', function(){
             let formData = qs.parse(requestBody);
+
+            // santize all form fields for html characters.
+            for(let k in formData){
+				formData[k] = escapeHtml(formData[k]); }
+
             let cmd_text = "";
             // handle form data to modify local variables and 
             if(formData.config){

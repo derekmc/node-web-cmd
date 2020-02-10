@@ -8,7 +8,14 @@
         font-family: monospace;
         color: #<%= foreground %>;
         background: #<%= background %>;
-     }
+        margin-bottom: 4px;
+      }
+      button{
+        border: 1px solid #<%= foreground %>;
+      }
+      small{
+        font-size: 65%;
+      }
     </style>
     <script>
       var hist_rows = [];
@@ -61,11 +68,28 @@
       <input type="hidden" name="app_name" id="app_name" value="" />
       <input type="hidden" name="app_state" id="app_state" value="" />
       <input type="hidden" name="config" id="config" value="<%= config %>" />
-      <br>
-      <input type="text" size="<% print(colcount - 14); %>" name="cmd_text" id="cmd_text"
-             autofocus autocomplete="off" value=""/>
-      <button type="submit">Run</button>
-      <a href=""><button type="button">Reset</button></a>
+      <table>
+        <tr>
+          <td>
+              <input type="text" size="<% print(colcount - 11); %>"
+                     name="cmd_text" id="cmd_text"
+                     placeholder="Enter command"
+                     autofocus autocomplete="off" value=""/>
+          </td>
+          <td rowspan="2">
+            <button type="submit" style="width: 6em; height: 4em;">Run</button>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <input type="password" name="secret_input" id="secret_input"
+                   placeholder="Password(optional)"
+                   title="Password is only required for special commands, like 'login'."
+                   size="<% print(colcount - 11); %>" value=""/>
+          </td>
+        </tr>
+      </table>
+
     </form>
   </body>
 </html>

@@ -161,6 +161,7 @@ let server = http.createServer(function(request, response){
         });
 		request.on('end', function(){
             let formData = qs.parse(requestBody);
+            // console.log('secret_input', formData.secret_input);
 
             // santize all form fields for html characters.
             for(let k in formData){
@@ -226,7 +227,7 @@ let server = http.createServer(function(request, response){
         template_data.title = data.title;
         let cmd_out_lines = data.cmd_out.split("\n");
         if(cmd_out_lines.length >= data.config.rowcount){
-            cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - data.config.rowcount);
+            cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - data.config.rowcount + 1);
         }
         template_data.cmd_out = cmd_out_lines.join("\n");
         // console.log('cmd_hist', data.cmd_hist);

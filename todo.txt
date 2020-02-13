@@ -1,3 +1,4 @@
+all password commands have a * prefix -- 20.02.13 05:16
 expandable input for password input -- 20.02.13 05:13
 full stack for appname and appstate. -- 20.02.13 04:42
 database/state contexts, set per command. -- 20.02.13 04:42

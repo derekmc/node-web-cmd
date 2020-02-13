@@ -75,7 +75,26 @@ helpMessages.help = "Show help for a command. Example: \"help config\".";
 
 commands.help = function(state, args, puts){
     if(args.length == 1){
-        args.push('help'); }
+        puts("Commands:");
+        let list = [];
+        list = list.concat(getKeys(commands));
+        list = list.concat(getKeys(aliases));
+        let row = [];
+        for(let i=0; i<list.length; ){
+            row = [];
+            row.push(list[i]);
+            if(++i == list.length) break;
+            row.push(list[i]);
+            if(++i == list.length) break;
+            row.push(list[i]);
+            if(++i == list.length) break;
+            row.push(list[i]);
+            if(++i == list.length) break;
+            puts(row.join(', ') + ','); }
+        if(row.length) puts(row.join(', '));
+        puts("Type \"help <command>\" for command help.");
+        return; }
+    //args.push('help'); }
     for(var i=1; i<args.length; ++i){
         let cmd = args[i];
         if(cmd in helpMessages){
@@ -89,6 +108,12 @@ commands.help = function(state, args, puts){
 
 
 // second map overwrites first.
+function getKeys(obj){
+    let keys = [];
+    for(let k in obj){
+        keys.push(k); }
+    return keys;
+}
 function mergeIntoMap(result, a){
     for(let k in a){
         result[k] = a[k]; }

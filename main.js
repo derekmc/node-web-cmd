@@ -5,6 +5,7 @@ let qs = require('querystring');
 let template = require('lodash')._.template;
 let helpMessages = {};
 let commands = {};
+let aliases = {}
 let apps = {};
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
@@ -12,7 +13,7 @@ const NEW_CONTEXT = "\n==NEW CONTEXT==\n";
 const config_regex = /^[A-Za-z0-9 ]*$/;
 
 // config is a whitespace separated list of tuples
-const DEFAULT_CONFIG = "rowcount 19 colcount 54 darkmode false";
+const DEFAULT_CONFIG = "rows 19 cols 54 fg 000 bg fff";
 const DEFAULT_HIST = "help";
 
 // sanitize all fields
@@ -37,6 +38,8 @@ function loadApp(filename){
 }
 function loadDataApp(filename){
 }
+aliases.darkmode = 'config bg 000 fg fff';
+aliases.lightmode = 'config bg fff fg 000';
 
 helpMessages.config =
   "Edit config.\n" + 
@@ -54,11 +57,18 @@ commands.config = function(state, args, puts){
     if(!config_regex.test(config_str)){
         puts("'config' only allows alphanumeric values.");
         return; }
-    let change_config = parseConfig(config_str);
-    state.config = mergeMap(state.config, change_config);
+    let new_config = parseConfig(config_str);
+    let config_props = parseConfig(DEFAULT_CONFIG);
+    let filtered = {};
+    for(let k in new_config){
+        if(k in config_props){
+            filtered[k] = new_config[k]; }
+        else{
+            puts("Invalid config property '" + k + "'"); }}
+    state.config = mergeMap(state.config, filtered);
     puts("config changes:");
-    for(let k in change_config){
-        puts(" " + k + " " + change_config[k]); }
+    for(let k in filtered){
+        puts(" " + k + " " + filtered[k]); }
 }
 
 helpMessages.help = "Show help for a command. Example: \"help config\".";
@@ -70,6 +80,8 @@ commands.help = function(state, args, puts){
         let cmd = args[i];
         if(cmd in helpMessages){
             puts(cmd + ": " + helpMessages[cmd]); }
+        else if(cmd in aliases){
+            puts("Alias '" + cmd + "' : " + aliases[cmd]); }
         else{
             puts("No help for '" + cmd + "'."); }
     }
@@ -211,6 +223,9 @@ let server = http.createServer(function(request, response){
     function handleCommand(cmd_text, puts, data){
         if(!cmd_text) cmd_text = "";
         puts("> " + cmd_text);
+        // aliases require full match
+        if(cmd_text in aliases){
+            cmd_text = aliases[cmd_text]; }
         let args = cmd_text.split(/\s+/);
         if(!args.length) return;
         let cmd = args[0];
@@ -225,8 +240,8 @@ let server = http.createServer(function(request, response){
 
         template_data.title = data.title;
         let cmd_out_lines = data.cmd_out.split("\n");
-        if(cmd_out_lines.length >= data.config.rowcount){
-            cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - data.config.rowcount);
+        if(cmd_out_lines.length >= data.config.rows){
+            cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - data.config.rows);
         }
         template_data.cmd_out = cmd_out_lines.join("\n");
         // console.log('cmd_hist', data.cmd_hist);

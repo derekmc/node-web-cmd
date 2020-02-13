@@ -43,7 +43,7 @@ aliases.lightmode = 'config bg fff fg 000';
 
 helpMessages.config =
   "Edit config.\n" + 
-  " Example: \"config darkmode true\"\n" +
+  " Example: \"config rows 25 cols 65\"\n" +
   " Type 'config' with no arguments to see current config.\n";
 
 // commands modify state in place, apps do not.

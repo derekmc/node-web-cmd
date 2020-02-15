@@ -1,3 +1,4 @@
+send command list to client, for features like tab completion -- 20.02.15 08:30
 all password commands have a * prefix -- 20.02.13 05:16
 expandable input for password input -- 20.02.13 05:13
 full stack for appname and appstate. -- 20.02.13 04:42

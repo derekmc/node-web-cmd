@@ -40,6 +40,47 @@ function loadDataApp(filename){
 }
 aliases.darkmode = 'config bg 000 fg fff';
 aliases.lightmode = 'config bg fff fg 000';
+aliases.small = 'config rows 13 cols 25';
+aliases.medium = 'config rows 19 cols 54';
+aliases.large = 'config rows 28 cols 75';
+aliases.xlarge = 'config rows 40 cols 115';
+aliases.tall = 'config rows 33 cols 54';
+
+helpMessages.help = "Show help for a command. Example: \"help config\".";
+
+commands.help = function(state, args, puts){
+    if(args.length == 1){
+        let list = [];
+        list = list.concat(getKeys(commands));
+        list = list.concat(getKeys(aliases));
+        let row = [];
+        let CMD_ROW = 4;
+        for(let i=0; i<list.length; ){
+            row = [];
+            if(i > 0){ // one less on first row only.
+                row.push(list[i]);
+                if(++i == list.length) break; }
+            for(let j=0; j<CMD_ROW - 1; ++j){
+                row.push(list[i]);
+                if(++i == list.length) break; }
+            if(i == list.length) break;
+            puts((i<CMD_ROW? "Commands: " : " ") + row.join(', ') + ','); }
+        if(row.length) puts(" " + row.join(', '));
+        puts("Type \"help <command>\" for command help.");
+        return; }
+    //args.push('help'); }
+    for(var i=1; i<args.length; ++i){
+        let cmd = args[i];
+        if(cmd in helpMessages){
+            puts(cmd + ": " + helpMessages[cmd]); }
+        else if(cmd in aliases){
+            puts("Alias '" + cmd + "': " + aliases[cmd]); }
+        else{
+            puts("No help for '" + cmd + "'."); }
+    }
+}
+
+
 
 helpMessages.config =
   "Edit config.\n" + 
@@ -70,42 +111,6 @@ commands.config = function(state, args, puts){
     for(let k in filtered){
         puts(" " + k + " " + filtered[k]); }
 }
-
-helpMessages.help = "Show help for a command. Example: \"help config\".";
-
-commands.help = function(state, args, puts){
-    if(args.length == 1){
-        puts("Commands:");
-        let list = [];
-        list = list.concat(getKeys(commands));
-        list = list.concat(getKeys(aliases));
-        let row = [];
-        for(let i=0; i<list.length; ){
-            row = [];
-            row.push(list[i]);
-            if(++i == list.length) break;
-            row.push(list[i]);
-            if(++i == list.length) break;
-            row.push(list[i]);
-            if(++i == list.length) break;
-            row.push(list[i]);
-            if(++i == list.length) break;
-            puts(row.join(', ') + ','); }
-        if(row.length) puts(row.join(', '));
-        puts("Type \"help <command>\" for command help.");
-        return; }
-    //args.push('help'); }
-    for(var i=1; i<args.length; ++i){
-        let cmd = args[i];
-        if(cmd in helpMessages){
-            puts(cmd + ": " + helpMessages[cmd]); }
-        else if(cmd in aliases){
-            puts("Alias '" + cmd + "' : " + aliases[cmd]); }
-        else{
-            puts("No help for '" + cmd + "'."); }
-    }
-}
-
 
 // second map overwrites first.
 function getKeys(obj){
@@ -265,9 +270,14 @@ let server = http.createServer(function(request, response){
         let template_data = {};
 
         template_data.title = data.title;
+
+        let cmd_list = [];
+        cmd_list = cmd_list.concat(getKeys(commands));
+        cmd_list = cmd_list.concat(getKeys(aliases));
+        template_data.cmd_list = cmd_list.join(' ');
         let cmd_out_lines = data.cmd_out.split("\n");
-        if(cmd_out_lines.length >= data.config.rowcount){
-            cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - data.config.rowcount + 1);
+        if(cmd_out_lines.length >= data.config.rows){
+            cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - data.config.rows + 1);
         }
         template_data.cmd_out = cmd_out_lines.join("\n");
         // console.log('cmd_hist', data.cmd_hist);
@@ -278,10 +288,6 @@ let server = http.createServer(function(request, response){
         for(let key in data.config){
             template_data[key] = data.config[key];
         }
-
-        let dark = data.config.darkmode === "true";
-        template_data.background = dark? '000' : 'fff';
-        template_data.foreground = dark? 'fff' : '000';
 
         response.writeHead(200, {"Content-Type": "text/html"});
         let html = cmd_page(template_data);

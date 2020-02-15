@@ -18,6 +18,7 @@
       }
     </style>
     <script>
+      var cmd_list = "<%= cmd_list %>".split(' ');
       var hist_rows = [];
       var hist_index = -1; // hist indexes are negative, 0 is empty line.
       function init(){

@@ -6,12 +6,12 @@
     <style>
       * {
         font-family: monospace;
-        color: #<%= foreground %>;
-        background: #<%= background %>;
+        color: #<%= fg %>;
+        background: #<%= bg %>;
         margin-bottom: 4px;
       }
       button{
-        border: 1px solid #<%= foreground %>;
+        border: 1px solid #<%= fg %>;
       }
       small{
         font-size: 65%;
@@ -59,8 +59,8 @@
   <body>
     <form method="POST">
       <textarea name="cmd_out"
-                rows="<%= rowcount %>"
-                cols="<%= colcount %>"
+                rows="<%= rows %>"
+                cols="<%= cols %>"
                 readonly style="overflow: auto; white-space: pre;"><%= cmd_out %>
       </textarea>
       <!-- TODO: populate these values with template data -->
@@ -68,27 +68,19 @@
       <input type="hidden" name="app_name" id="app_name" value="" />
       <input type="hidden" name="app_state" id="app_state" value="" />
       <input type="hidden" name="config" id="config" value="<%= config %>" />
-      <table>
-        <tr>
-          <td>
-              <input type="text" size="<% print(colcount - 11); %>"
-                     name="cmd_text" id="cmd_text"
-                     placeholder="Enter command"
-                     autofocus autocomplete="off" value=""/>
-          </td>
-          <td rowspan="2">
-            <button type="submit" style="width: 6em; height: 4em;">Run</button>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <input type="password" name="secret_input" id="secret_input"
-                   placeholder="Password(optional)"
-                   title="Password is only required for special commands, like 'login'."
-                   size="<% print(colcount - 11); %>" value=""/>
-          </td>
-        </tr>
-      </table>
+      <br>
+      <input type="text" size="<% print(cols - 9); %>" name="cmd_text" id="cmd_text"
+             autofocus autocomplete="off" value="" placeholder="Enter Command"/>
+      <button type="submit">Run</button>
+      <!-- <a href=""><button type="button" title="Open Password Input">^</button></a> -->
+      <br>
+      <input type="password" size="<% print(cols - 9); %>" name="cmd_password_input" id="cmd_password_input"
+             autofocus autocomplete="off" value="" placeholder="Password"/>
+      <!--<a href=""><button type="button" title="Open Password Input">v</button></a>-->
+      <br>
+      <input type="password" size="<% print(cols - 9); %>" name="cmd_password_input2" id="cmd_password_input2"
+             autofocus autocomplete="off" value="" placeholder="Password #2"/>
+      <!-- <a href=""><button type="button" title="Open Password Input">v</button></a>-->
 
     </form>
   </body>

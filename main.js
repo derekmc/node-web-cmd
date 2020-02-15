@@ -5,6 +5,7 @@ let qs = require('querystring');
 let template = require('lodash')._.template;
 let helpMessages = {};
 let commands = {};
+let aliases = {}
 let apps = {};
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
@@ -12,7 +13,7 @@ const NEW_CONTEXT = "\n==NEW CONTEXT==\n";
 const config_regex = /^[A-Za-z0-9 ]*$/;
 
 // config is a whitespace separated list of tuples
-const DEFAULT_CONFIG = "rowcount 19 colcount 54 darkmode false";
+const DEFAULT_CONFIG = "rows 19 cols 54 fg 000 bg fff";
 const DEFAULT_HIST = "help";
 
 // sanitize all fields
@@ -37,10 +38,12 @@ function loadApp(filename){
 }
 function loadDataApp(filename){
 }
+aliases.darkmode = 'config bg 000 fg fff';
+aliases.lightmode = 'config bg fff fg 000';
 
 helpMessages.config =
   "Edit config.\n" + 
-  " Example: \"config darkmode true\"\n" +
+  " Example: \"config rows 25 cols 65\"\n" +
   " Type 'config' with no arguments to see current config.\n";
 
 // commands modify state in place, apps do not.
@@ -54,22 +57,50 @@ commands.config = function(state, args, puts){
     if(!config_regex.test(config_str)){
         puts("'config' only allows alphanumeric values.");
         return; }
-    let change_config = parseConfig(config_str);
-    state.config = mergeMap(state.config, change_config);
+    let new_config = parseConfig(config_str);
+    let config_props = parseConfig(DEFAULT_CONFIG);
+    let filtered = {};
+    for(let k in new_config){
+        if(k in config_props){
+            filtered[k] = new_config[k]; }
+        else{
+            puts("Invalid config property '" + k + "'"); }}
+    state.config = mergeMap(state.config, filtered);
     puts("config changes:");
-    for(let k in change_config){
-        puts(" " + k + " " + change_config[k]); }
+    for(let k in filtered){
+        puts(" " + k + " " + filtered[k]); }
 }
 
 helpMessages.help = "Show help for a command. Example: \"help config\".";
 
 commands.help = function(state, args, puts){
     if(args.length == 1){
-        args.push('help'); }
+        puts("Commands:");
+        let list = [];
+        list = list.concat(getKeys(commands));
+        list = list.concat(getKeys(aliases));
+        let row = [];
+        for(let i=0; i<list.length; ){
+            row = [];
+            row.push(list[i]);
+            if(++i == list.length) break;
+            row.push(list[i]);
+            if(++i == list.length) break;
+            row.push(list[i]);
+            if(++i == list.length) break;
+            row.push(list[i]);
+            if(++i == list.length) break;
+            puts(row.join(', ') + ','); }
+        if(row.length) puts(row.join(', '));
+        puts("Type \"help <command>\" for command help.");
+        return; }
+    //args.push('help'); }
     for(var i=1; i<args.length; ++i){
         let cmd = args[i];
         if(cmd in helpMessages){
             puts(cmd + ": " + helpMessages[cmd]); }
+        else if(cmd in aliases){
+            puts("Alias '" + cmd + "' : " + aliases[cmd]); }
         else{
             puts("No help for '" + cmd + "'."); }
     }
@@ -77,6 +108,12 @@ commands.help = function(state, args, puts){
 
 
 // second map overwrites first.
+function getKeys(obj){
+    let keys = [];
+    for(let k in obj){
+        keys.push(k); }
+    return keys;
+}
 function mergeIntoMap(result, a){
     for(let k in a){
         result[k] = a[k]; }
@@ -212,6 +249,9 @@ let server = http.createServer(function(request, response){
     function handleCommand(cmd_text, puts, data){
         if(!cmd_text) cmd_text = "";
         puts("> " + cmd_text);
+        // aliases require full match
+        if(cmd_text in aliases){
+            cmd_text = aliases[cmd_text]; }
         let args = cmd_text.split(/\s+/);
         if(!args.length) return;
         let cmd = args[0];

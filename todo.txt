@@ -1,5 +1,11 @@
-make darkmode an alias for setting foreground and background colors.
-add aliases
-parse commands -- 20.02.07 21:12
-command callbacks -- 20.02.07 21:12
+all password commands have a * prefix -- 20.02.13 05:16
+expandable input for password input -- 20.02.13 05:13
+full stack for appname and appstate. -- 20.02.13 04:42
+database/state contexts, set per command. -- 20.02.13 04:42
+newuser command -- 20.02.13 04:41
+
 ## parse and handle form history and config -- 20.02.07 21:12 | 20.02.07 22:44 =
+## make darkmode an alias for setting foreground and background colors. | 20.02.13 04:40 =
+## add aliases | 20.02.13 04:40 =
+## parse commands -- 20.02.07 21:12 | 20.02.13 04:40 =
+## command callbacks -- 20.02.07 21:12 | 20.02.13 04:40 =

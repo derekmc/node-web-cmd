@@ -31,11 +31,13 @@ exports.load = function(filename, next){
 }
 // for now, this only uses get and set callbacks with in memory data.
 exports.get = function(key, next){
+    if(!next || (typeof next != 'function')) throw new Error('no next func');
     next(__data[key]);
 }
 
-// newkey forces it to be a newkey.
+// setNew forces it to be a newkey.
 exports.set = function(key, value, next){
+    if(!next || (typeof next != 'function')) throw new Error('no next func');
     if(value === undefined){
         delete __data[key]; }
     else{
@@ -52,17 +54,27 @@ function randstr(chars, len){
 }
 
 
-// generates new key according to parameters, and passes it to next.
-exports.genKey = function(args, initval, next){
+// generates new id according to parameters,
+// sets the value with the prefix, and passes id to next.
+// optional: idRef is a unique lookup reference to the id, must be empty.
+exports.genId = function(args, next){
+    if(!next || (typeof next != 'function')) throw new Error('no next func');
     let prefix = args.prefix? args.prefix : "";
+    let idRef = args.idRef; // make sure idRef is empty if provided.
+    let refOnly = args.refOnly; 
     let chars = args.chars? args.chars : ALPHANUMS;
     let len = args.len? args.len : DEFAULT_LEN;
     let tries = args.tries? args.tries : DEFAULT_TRIES;
+    let init = ('init' in args)? args.init : null;
+    if(idRef && (idRef in __data)){
+        next(`idRef '${idRef}' already exists.`, null);
+        return; }
     for(let i=0; i<tries; ++i){
         let id = randstr(chars, len);
         let k = prefix + id;
         if(!(k in __data)){
-            __data[k] = initval;
+            if(!refOnly){ __data[k] = init; }
+            if(idRef){ __data[idRef] = id; }
             next(undefined, id);
             return;
         }

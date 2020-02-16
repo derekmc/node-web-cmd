@@ -8,7 +8,7 @@ db.load(null, ()=>{
             console.log('user set. uid: ' + uid);
             db.save(null, ()=>{console.log('db saved')});
             db.getIds('user|', (err, ids)=>{
-                console.log('user ids', ids.join(', ')); })
+                console.log('user ids: ', ids.join(', ')); })
         })
     })
 })

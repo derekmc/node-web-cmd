@@ -6,6 +6,14 @@ const DEFAULT_LEN = 4;
 const DEFAULT_TRIES = 4;
 
 let __data = {};
+// gets 'ids' from all keys matching the prefix.
+exports.getIds = function(prefix, next){
+    let result = [];
+    for(let k in __data){
+        if(k.indexOf(prefix) == 0){
+            result.push(k.substr(prefix.length)); }}
+    next(undefined, result);
+}
 exports.save = function(filename, next){
     fs.writeFile(filename? filename : DEFAULT_DB_FILE,
         JSON.stringify(__data), (err)=>{if(next) next(err)});
@@ -28,7 +36,10 @@ exports.get = function(key, next){
 
 // newkey forces it to be a newkey.
 exports.set = function(key, value, next){
-    __data[key] = value;
+    if(value === undefined){
+        delete __data[key]; }
+    else{
+        __data[key] = value; }
     next();
 }
 

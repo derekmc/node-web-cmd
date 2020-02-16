@@ -2,6 +2,7 @@
 let http = require('http');
 let fs = require('fs');
 let qs = require('querystring');
+let db = require('./db.js');
 let template = require('lodash')._.template;
 let helpMessages = {};
 let commands = {};
@@ -13,11 +14,13 @@ const NEW_CONTEXT = "\n==NEW CONTEXT==\n";
 const config_regex = /^[A-Za-z0-9 ]*$/;
 
 // config is a whitespace separated list of tuples
+// TODO allow setting the data context with config: 'browser', 'cookie', 'user', or 'session'
+// apps that aren't data apps simply use the configured data context.
 const DEFAULT_CONFIG = "rows 19 cols 54 fg 000 bg fff";
 const DEFAULT_HIST = "help";
 
 // sanitize all fields
-// TODO make sure this sanitization is sufficient.
+// TODO make sure this sanitization is sufficient and accurate.
 function escapeHtml(unsafe) {
     return unsafe
          .replace(/&/g, "&amp;")
@@ -32,11 +35,15 @@ function escapeHtml(unsafe) {
 
 // TODO loadCommand and loadApp functions load apps or commands from a file and set their help messages.
 // TODO a DataApp uses database callbacks like revision-db.
-function loadCmd(filename){
+function loadCmd(filename, cmdname){
+    // cmd(state, args, puts)
 }
-function loadApp(filename){
+function loadApp(filename, appname){
+    // app(state, args, puts)
 }
-function loadDataApp(filename){
+// a db app is just an app, with a wrapped database reference in a closure.
+function loadDataApp(db, filename, appname){
+    // dataapp(db, args, puts)
 }
 aliases.darkmode = 'config bg 000 fg fff';
 aliases.lightmode = 'config bg fff fg 000';

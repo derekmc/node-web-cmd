@@ -67,7 +67,8 @@ exports.genId = function(args, next){
     let tries = args.tries? args.tries : DEFAULT_TRIES;
     let init = ('init' in args)? args.init : null;
     if(idRef && (idRef in __data)){
-        next(`idRef '${idRef}' already exists.`, null);
+        console.log('idRef', idRef);
+        next(`idRef '${idRef}' already exists.`, __data[idRef]);
         return; }
     for(let i=0; i<tries; ++i){
         let id = randstr(chars, len);

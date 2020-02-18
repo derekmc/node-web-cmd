@@ -39,12 +39,15 @@ function loadCmd(filename, cmdname){
     // cmd(state, args, puts)
 }
 function loadApp(filename, appname){
+    app = require(filename);
     // app(state, args, puts)
 }
 // a db app is just an app, with a wrapped database reference in a closure.
 function loadDataApp(db, filename, appname){
     // dataapp(db, args, puts)
 }
+loadApp('./app/guess.js', 'guess');
+
 aliases.darkmode = 'config bg 000 fg fff';
 aliases.lightmode = 'config bg fff fg 000';
 aliases.small = 'config rows 13 cols 25';

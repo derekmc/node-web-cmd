@@ -1,3 +1,4 @@
+make a command that uses a database. -- 20.02.17 22:23
 send command list to client, for features like tab completion -- 20.02.15 08:30
 all password commands have a * prefix -- 20.02.13 05:16
 expandable input for password input -- 20.02.13 05:13

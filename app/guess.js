@@ -9,7 +9,7 @@ function guessApp(state, args, puts){
         max = (args.length > 0 && parseInt(args[0]) > 0)? parseInt(args[0]) : DEFAULT_MAX;
         n = Math.floor(Math.random() * max)
         guesses = -1;
-        max_guesses = max(1, Math.floor(Math.log2(max) - 0.285));
+        max_guesses = Math.max(1, Math.floor(Math.log2(max) - 0.285));
     }
     else{
         let data = state.split(/,\s*/);

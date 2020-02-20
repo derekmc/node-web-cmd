@@ -70,7 +70,8 @@
       <input type="hidden" name="app_state" id="app_state" value="<%= app_state %>" />
       <input type="hidden" name="config" id="config" value="<%= config %>" />
       <br>
-      <input type="text" size="<% print(cols - 9); %>" name="cmd_text" id="cmd_text"
+      <%= app_name %>
+      <input type="text" size="<% print(cols - 9 - app_name.length); %>" name="cmd_text" id="cmd_text"
              autofocus autocomplete="off" value="" placeholder="Enter Command"/>
       <button type="submit">Run</button>
       <!-- <a href=""><button type="button" title="Open Password Input">^</button></a> -->

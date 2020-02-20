@@ -5,9 +5,9 @@ let qs = require('querystring');
 let db = require('./db.js');
 let template = require('lodash')._.template;
 let helpMessages = {};
-let commands = {};
-let aliases = {}
-let apps = {};
+let Commands = {};
+let Aliases = {}
+let Apps = {};
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
 const NEW_CONTEXT = "\n==NEW CONTEXT==\n";
@@ -48,21 +48,21 @@ function loadDataApp(db, filename, appname){
 }
 loadApp('./app/guess.js', 'guess');
 
-aliases.darkmode = 'config bg 000 fg fff';
-aliases.lightmode = 'config bg fff fg 000';
-aliases.small = 'config rows 13 cols 25';
-aliases.medium = 'config rows 19 cols 54';
-aliases.large = 'config rows 28 cols 75';
-aliases.xlarge = 'config rows 40 cols 115';
-aliases.tall = 'config rows 33 cols 54';
+Aliases.darkmode = 'config bg 000 fg fff';
+Aliases.lightmode = 'config bg fff fg 000';
+Aliases.small = 'config rows 13 cols 25';
+Aliases.medium = 'config rows 19 cols 54';
+Aliases.large = 'config rows 28 cols 75';
+Aliases.xlarge = 'config rows 40 cols 115';
+Aliases.tall = 'config rows 33 cols 54';
 
 helpMessages.help = "Show help for a command. Example: \"help config\".";
 
-commands.help = function(state, args, puts){
+Commands.help = function(state, args, puts){
     if(args.length == 1){
         let list = [];
-        list = list.concat(getKeys(commands));
-        list = list.concat(getKeys(aliases));
+        list = list.concat(getKeys(Commands));
+        list = list.concat(getKeys(Aliases));
         let row = [];
         let CMD_ROW = 4;
         for(let i=0; i<list.length; ){
@@ -83,8 +83,8 @@ commands.help = function(state, args, puts){
         let cmd = args[i];
         if(cmd in helpMessages){
             puts(cmd + ": " + helpMessages[cmd]); }
-        else if(cmd in aliases){
-            puts("Alias '" + cmd + "': " + aliases[cmd]); }
+        else if(cmd in Aliases){
+            puts("Alias '" + cmd + "': " + Aliases[cmd]); }
         else{
             puts("No help for '" + cmd + "'."); }
     }
@@ -97,8 +97,8 @@ helpMessages.config =
   " Example: \"config rows 25 cols 65\"\n" +
   " Type 'config' with no arguments to see current config.\n";
 
-// commands modify state in place, apps do not.
-commands.config = function(state, args, puts){
+// Commands modify state in place, apps do not.
+Commands.config = function(state, args, puts){
     if(args.length == 1){
         let index = 0;
         for(var k in state.config){
@@ -232,6 +232,9 @@ let server = http.createServer(function(request, response){
                 data.cmd_hist = parseHist(formData.cmd_hist);
             }
             // TODO do we want an app stack?
+            // when an app in the app stack returns,
+            // the child app_name and child app_state
+            // are passed as extra parameters to the app.
             if(formData.app_name){
                 data.app_name = formData.app_name;
             }
@@ -250,28 +253,28 @@ let server = http.createServer(function(request, response){
             }
 
             let puts = function(s){ data.cmd_out += "\n" + s; }
-            if(data.app_name.length){
-                data.app_state = handleApp(data.app_name, data.cmd_text, puts, data.app_state); }
-            else{
-                handleCommand(data.cmd_text, puts, data); }
-
+            handleCommand(data, data.cmd_text, puts);
             cmdPage(data);
         });
     }
-    function handleApp(app_name, cmd_text, puts, state){
-        // TODO
-    }
-    function handleCommand(cmd_text, puts, data){
+    function handleCommand(data, cmd_text, puts){
         if(!cmd_text) cmd_text = "";
         puts("> " + cmd_text);
         // aliases require full match
-        if(cmd_text in aliases){
-            cmd_text = aliases[cmd_text]; }
+        if(cmd_text in Aliases){
+            cmd_text = Aliases[cmd_text]; }
         let args = cmd_text.split(/\s+/);
         if(!args.length) return;
         let cmd = args[0];
-        if(cmd in commands){
-            commands[cmd](data, args, function(s){ puts(" " + s); }); }
+        if(data.app_name = "" && cmd in Apps){
+            data.app_name = cmd;
+            data.app_state}
+        if(data.app_name.length){
+            // TODO handle data_context config parameter.
+            data.app_state = Apps[data.app_name](data.app_state, args, puts); }
+        else if(!data.app_name.length && cmd in Commands){
+            // wrap puts to start all lines with a space.
+            Commands[cmd](data, args, function(s){ puts(" " + s); }); }
         else{
             puts(" Unknown command: '" + cmd + "'"); }
     }
@@ -282,8 +285,8 @@ let server = http.createServer(function(request, response){
         template_data.title = data.title;
 
         let cmd_list = [];
-        cmd_list = cmd_list.concat(getKeys(commands));
-        cmd_list = cmd_list.concat(getKeys(aliases));
+        cmd_list = cmd_list.concat(getKeys(Commands));
+        cmd_list = cmd_list.concat(getKeys(Aliases));
         template_data.cmd_list = cmd_list.join(' ');
         let cmd_out_lines = data.cmd_out.split("\n");
         if(cmd_out_lines.length >= data.config.rows){
@@ -293,6 +296,8 @@ let server = http.createServer(function(request, response){
         // console.log('cmd_hist', data.cmd_hist);
         template_data.cmd_hist = dumpHist(data.cmd_hist);
         template_data.config = dumpConfig(data.config);
+        template_data.app_name = data.app_name;
+        template_data.app_state = data.app_state;
 
         // add config vars to rendering data context.
         for(let key in data.config){

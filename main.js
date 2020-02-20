@@ -274,7 +274,7 @@ let server = http.createServer(function(request, response){
             data.app_state = Apps[data.app_name](data.app_state, args, puts); }
         else if(!data.app_name.length && cmd in Commands){
             // wrap puts to start all lines with a space.
-            data.app_name = "test app_name";
+            // data.app_name = "test app_name";
             Commands[cmd](data, args, function(s){ puts(" " + s); }); }
         else{
             puts(" Unknown command: '" + cmd + "'"); }

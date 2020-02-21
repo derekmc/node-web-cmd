@@ -275,8 +275,14 @@ let server = http.createServer(function(request, response){
             args = args.slice(1);
             data.app_state; }
         if(data.app_name.length){
-            // TODO handle data_context config parameter.
-            data.app_state = Apps[data.app_name](data.app_state, args, puts); }
+            if(cmd == 'clear'){
+                data.cmd_out = ""; }
+            else if(cmd == "exit"){
+                data.app_state = "";
+                data.app_name = ""; }
+            else{
+                // TODO handle data_context config parameter.
+                data.app_state = Apps[data.app_name](data.app_state, args, puts); }}
         else if(cmd in Commands){
             // data.app_name = "test app_name";
             Commands[cmd](data, args, _puts); }

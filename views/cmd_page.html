@@ -63,7 +63,7 @@
       <textarea name="cmd_out"
                 rows="<%= rows %>"
                 cols="<%= cols %>"
-                readonly style="overflow: auto; white-space: pre;"><%= cmd_out %>
+                readonly style="overflow: hidden; white-space: pre;"><%= cmd_out %>
       </textarea>
       <!-- TODO: populate these values with template data -->
       <input type="hidden" name="cmd_hist" id="cmd_hist" value="<%= cmd_hist %>" />
@@ -72,7 +72,8 @@
       <input type="hidden" name="config" id="config" value="<%= config %>" />
       <br>
       <%= app_name %>
-      <input type="text" size="<% print(cols - 9 - app_name.length); %>" name="cmd_text" id="cmd_text"
+	  <input type="text" name="cmd_text" id="cmd_text"
+	         size="<% print(cols - 9 - (app_name.length? app_name.length + 1 : 0)); %>"
              autofocus autocomplete="off" value="" placeholder="Enter Command"/>
       <button type="submit">Run</button>
       <!-- <a href=""><button type="button" title="Open Password Input">^</button></a> -->

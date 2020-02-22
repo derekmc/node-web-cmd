@@ -53,8 +53,8 @@ function loadDataApp(db, filename, appname){
 loadApp('guess', './app/guess.js');
 console.log('apps', Apps)
 
-Aliases.darkmode = 'config bg 000 fg fff';
-Aliases.lightmode = 'config bg fff fg 000';
+Aliases.dark = 'config bg 000 fg fff';
+Aliases.light = 'config bg fff fg 000';
 Aliases.small = 'config rows 13 cols 25';
 Aliases.medium = 'config rows 19 cols 54';
 Aliases.large = 'config rows 28 cols 75';

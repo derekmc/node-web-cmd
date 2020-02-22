@@ -2,12 +2,15 @@
 module.exports = guessApp;
 
 const DEFAULT_MAX = 100;
+function randint(n){
+    return 1 + Math.floor(Math.random() * (n - 1));
+}
 
 function guessApp(state, args, puts){
     let max, n, guesses, max_guesses;
     if(state == ""){
         max = (args.length > 0 && parseInt(args[0]) > 0)? parseInt(args[0]) : DEFAULT_MAX;
-        n = Math.floor(Math.random() * max)
+        n = randint(max)
         guesses = -1;
         max_guesses = Math.max(1, Math.floor(Math.log2(max) - 0.285));
     }
@@ -20,7 +23,7 @@ function guessApp(state, args, puts){
     }
     ++guesses;
     guess = -1
-    msg = ` Guess a number from 1 to ${max}`;
+    msg = ` Guess a number from 1 to ${max}.`;
     if(guesses > 0){
         if(args.length < 1){
             --guesses; }

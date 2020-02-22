@@ -3,7 +3,7 @@ module.exports = guessApp;
 
 const DEFAULT_MAX = 100;
 function randint(n){
-    return 1 + Math.floor(Math.random() * (n - 1));
+    return 1 + Math.floor(n * Math.random());
 }
 
 function guessApp(state, args, puts){

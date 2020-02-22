@@ -8,6 +8,9 @@ let HelpMessages = {};
 let Commands = {};
 let Aliases = {}
 let Apps = {};
+let PORT = 8000;
+if(process.argv.length >= 3){
+    PORT = process.argv[2]; }
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
 const NEW_CONTEXT = "\n==NEW CONTEXT==\n";
@@ -323,6 +326,7 @@ let server = http.createServer(function(request, response){
         response.end(html);
     }
 })
-server.listen(8000);
 
-console.log("Server running on port 8000.");
+server.listen(PORT);
+
+console.log(`Server running on port ${PORT}.`);

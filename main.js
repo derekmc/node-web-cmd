@@ -21,6 +21,7 @@ const config_regex = /^[A-Za-z0-9 ]*$/;
 // apps that aren't data apps simply use the configured data context.
 const DEFAULT_CONFIG = "rows 19 cols 54 fg 000 bg fff";
 const DEFAULT_HIST = "help";
+const DEFAULT_CMDOUT = "Type 'help' for help.";
 
 // sanitize all fields
 // TODO make sure this sanitization is sufficient and accurate.
@@ -198,7 +199,8 @@ let server = http.createServer(function(request, response){
     let data  = {
         "title": "cmd",
         "config" : parseConfig(DEFAULT_CONFIG),
-        "cmd_out" : "Type 'help' for help.",
+        "cmd_out" : DEFAULT_CMDOUT,
+        "base_cmd_out" : "",
         "cmd_hist" : parseHist(DEFAULT_HIST),
         "app_name" : "",
         "app_state" : "",
@@ -212,18 +214,18 @@ let server = http.createServer(function(request, response){
         let requestBody = '';
         request.on('data', function(_data){
             requestBody += _data;
-			if(requestBody.length > 1e7) {
-			    response.writeHead(413, 'Request Entity Too Large', {'Content-Type': 'text/html'});
-			    response.end('<!doctype html><html><head><title>413</title></head><body>413: Request Entity Too Large</body></html>');
-			}
+            if(requestBody.length > 1e7) {
+                response.writeHead(413, 'Request Entity Too Large', {'Content-Type': 'text/html'});
+                response.end('<!doctype html><html><head><title>413</title></head><body>413: Request Entity Too Large</body></html>');
+            }
         });
-		request.on('end', function(){
+        request.on('end', function(){
             let formData = qs.parse(requestBody);
             // console.log('secret_input', formData.secret_input);
 
             // santize all form fields for html characters.
             for(let k in formData){
-				formData[k] = escapeHtml(formData[k]); }
+                formData[k] = escapeHtml(formData[k]); }
 
             let cmd_text = "";
             // handle form data to modify local variables and 
@@ -233,6 +235,9 @@ let server = http.createServer(function(request, response){
             }
             if(formData.cmd_out){
                 data.cmd_out = formData.cmd_out;
+            }
+            if(formData.base_cmd_out){
+                data.base_cmd_out = formData.base_cmd_out;
             }
             if(formData.cmd_hist){
                 data.cmd_hist = parseHist(formData.cmd_hist);
@@ -272,25 +277,33 @@ let server = http.createServer(function(request, response){
         let args = cmd_text.split(/\s+/);
         if(!args.length) return;
         let cmd = args[0];
-        if(data.app_name == "" && (cmd in Apps)){
-            data.app_name = cmd;
-            // when entering app, remove appname from args
-            args = args.slice(1);
-            data.app_state; }
-        if(data.app_name.length){
-            if(cmd == 'clear'){
-                data.cmd_out = ""; }
-            else if(cmd == "exit"){
-                data.app_state = "";
-                data.app_name = ""; }
-            else{
-                // TODO handle data_context config parameter.
-                data.app_state = Apps[data.app_name](data.app_state, args, puts); }}
-        else if(cmd in Commands){
-            // data.app_name = "test app_name";
-            Commands[cmd](data, args, _puts); }
+
+        // clear command works in any context.
+        if(cmd == 'clear'){
+            data.cmd_out = ""; }
         else{
-            puts(" Unknown command: '" + cmd + "'"); }
+            if(data.app_name == "" && (cmd in Apps)){
+                data.base_cmd_out = data.cmd_out;
+                data.cmd_out = "Type 'exit' to exit app.\n";
+                data.app_name = cmd;
+                // when entering app, remove appname from args
+                args = args.slice(1);
+                data.app_state; }
+            if(data.app_name.length){
+                if(cmd == "exit"){
+                    data.cmd_out = data.base_cmd_out;
+                    data.cmd_out += "\n'" + data.app_name + "' terminated.";
+                    data.base_cmd_out = "";
+                    data.app_state = "";
+                    data.app_name = ""; }
+                else{
+                    // TODO handle data_context config parameter.
+                    data.app_state = Apps[data.app_name](data.app_state, args, puts); }}
+            else if(cmd in Commands){
+                // data.app_name = "test app_name";
+                Commands[cmd](data, args, _puts); }
+            else{
+                puts(" Unknown command: '" + cmd + "'"); }}
         // wrap puts to start all lines with a space.
         function _puts(s){ puts(' ' + s); }
     }
@@ -310,6 +323,7 @@ let server = http.createServer(function(request, response){
             cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - data.config.rows + 1);
         }
         template_data.cmd_out = cmd_out_lines.join("\n");
+        template_data.base_cmd_out = data.base_cmd_out;
         // console.log('cmd_hist', data.cmd_hist);
         template_data.cmd_hist = dumpHist(data.cmd_hist);
         template_data.config = dumpConfig(data.config);

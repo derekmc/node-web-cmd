@@ -23,7 +23,7 @@ function guessApp(state, args, puts){
     }
     ++guesses;
     guess = -1
-    msg = ` Guess a number from 1 to ${max}.`;
+    msg = `Guess a number from 1 to ${max}.`;
     if(guesses > 0){
         if(args.length < 1){
             --guesses; }

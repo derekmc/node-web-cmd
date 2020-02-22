@@ -66,14 +66,15 @@
                 readonly style="overflow: hidden; white-space: pre;"><%= cmd_out %>
       </textarea>
       <!-- TODO: populate these values with template data -->
+      <input type="hidden" name="base_cmd_out" id="base_cmd_out" value="<%= base_cmd_out %>" />
       <input type="hidden" name="cmd_hist" id="cmd_hist" value="<%= cmd_hist %>" />
       <input type="hidden" name="app_name" id="app_name" value="<%= app_name %>" />
       <input type="hidden" name="app_state" id="app_state" value="<%= app_state %>" />
       <input type="hidden" name="config" id="config" value="<%= config %>" />
       <br>
       <%= app_name %>
-	  <input type="text" name="cmd_text" id="cmd_text"
-	         size="<% print(cols - 9 - (app_name.length? app_name.length + 1 : 0)); %>"
+      <input type="text" name="cmd_text" id="cmd_text"
+             size="<% print(cols - 9 - (app_name.length? app_name.length + 1 : 0)); %>"
              autofocus autocomplete="off" value="" placeholder="Enter Command"/>
       <button type="submit">Run</button>
       <!-- <a href=""><button type="button" title="Open Password Input">^</button></a> -->

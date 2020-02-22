@@ -66,23 +66,27 @@ HelpMessages.help = "Show help for a command. Example: \"help config\".";
 
 Commands.help = function(state, args, puts){
     if(args.length == 1){
-        let list = [];
-        list = list.concat(getKeys(Commands));
-        list = list.concat(getKeys(Aliases));
-        list = list.concat(getKeys(Apps));
-        let row = [];
-        let CMD_ROW = 4;
-        for(let i=0; i<list.length; ){
-            row = [];
-            if(i > 0){ // one less on first row only.
-                row.push(list[i]);
-                if(++i == list.length) break; }
-            for(let j=0; j<CMD_ROW - 1; ++j){
-                row.push(list[i]);
-                if(++i == list.length) break; }
-            if(i == list.length) break;
-            puts((i<CMD_ROW? "Commands: " : " ") + row.join(', ') + ','); }
-        if(row.length) puts(" " + row.join(', '));
+        let cmdlist = [];
+        let applist = getKeys(Apps);
+        cmdlist = cmdlist.concat(getKeys(Commands));
+        cmdlist = cmdlist.concat(getKeys(Aliases));
+        let CMD_ROW = 5;
+        let lists= {'Apps': applist, 'Commands': cmdlist};
+        for(let listname in lists){
+            let row = [];
+            let list = lists[listname];
+            for(let i=0; i<list.length; ){
+                if(i > 0){ // one less on first row only.
+                    row.push(list[i]); }
+                if(i < list.length){
+                    for(let j=0; j<CMD_ROW - 1; ++j){
+                        row.push(list[i]);
+                        if(++i == list.length) break; }}
+                //if(i == list.length) break;
+                puts((i<=CMD_ROW? listname + ": " : " ") + row.join(', ') + (i < list.length - 1? ',': ''));
+                row = []; }
+            if(row.length) puts(" " + row.join(', '));
+        }
         puts("Type \"help <command>\" for command help.");
         return; }
     //args.push('help'); }
@@ -284,7 +288,7 @@ let server = http.createServer(function(request, response){
         else{
             if(data.app_name == "" && (cmd in Apps)){
                 data.base_cmd_out = data.cmd_out;
-                data.cmd_out = "Type 'exit' to exit app.\n";
+                data.cmd_out = `'${cmd}' started. Type 'exit' to exit.\n`;
                 data.app_name = cmd;
                 // when entering app, remove appname from args
                 args = args.slice(1);

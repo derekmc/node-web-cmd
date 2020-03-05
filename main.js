@@ -192,8 +192,9 @@ function parseHist(hist_str){
 function dumpHist(hist){
     let result_array = [];
     if(!hist) return "";
+    //console.log('hist', hist);
     for(let i=0; i<hist.length; ++i){
-        // console.log('hist[i]', hist[i]);
+        //console.log('hist[i]', hist[i]);
         result_array.push(hist[i].join("\n"));
     }
     return result_array.join(NEW_CONTEXT) + "\n";
@@ -290,6 +291,7 @@ let server = http.createServer(function(request, response){
                 data.base_cmd_out = data.cmd_out;
                 data.cmd_out = `'${cmd}' started. Type 'exit' to exit.\n`;
                 data.app_name = cmd;
+                // data.cmd_hist += NEW_CONTEXT;
                 // when entering app, remove appname from args
                 args = args.slice(1);
                 data.app_state; }
@@ -299,6 +301,7 @@ let server = http.createServer(function(request, response){
                     data.cmd_out += "\n'" + data.app_name + "' terminated.";
                     data.base_cmd_out = "";
                     data.app_state = "";
+                    // data.cmd_hist = data.cmd_hist.substr(0, data.cmd_hist.lastIndexOf(NEW_CONTEXT));
                     data.app_name = ""; }
                 else{
                     // TODO handle data_context config parameter.

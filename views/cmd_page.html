@@ -17,6 +17,12 @@
       small{
         font-size: 65%;
       }
+      /*#passwords_div{
+        display: inline-block;
+      }*/
+      #passwords_div.hide_passwords {
+        display: none;
+      }
     </style>
     <script>
       var cmd_list = "<%= cmd_list %>".split(' ');
@@ -29,6 +35,7 @@
         console.log("hist_rows", hist_rows);
         var cmd_text = document.getElementById("cmd_text");
         cmd_text.addEventListener("keydown", keyDown);
+        document.getElementById("toggle_passwords_button").addEventListener("click", togglePasswords);
       }
       function editHistRow(){
         var cmd_text = document.getElementById("cmd_text");
@@ -55,6 +62,19 @@
         if(code == 38) upHist();
         if(code == 40) downHist();
       }
+      var HIDE_PASSWORDS = "hide_passwords";
+      function togglePasswords(event){
+        var passwords_div = document.getElementById("passwords_div");
+        var toggle_passwords_button = document.getElementById("toggle_passwords_button");
+        if(passwords_div.classList.contains(HIDE_PASSWORDS)){
+          toggle_passwords_button.innerHTML = "^";
+          passwords_div.classList.remove(HIDE_PASSWORDS); }
+        else{
+          toggle_passwords_button.innerHTML = "v";
+          passwords_div.classList.add(HIDE_PASSWORDS); }
+        event.preventDefault();
+        return false;
+      }
       window.addEventListener("load", init);
     </script>
   </head>
@@ -77,16 +97,17 @@
              size="<% print(cols - 9 - (app_name.length? app_name.length + 1 : 0)); %>"
              autofocus autocomplete="off" value="" placeholder="Enter Command"/>
       <button type="submit">Run</button>
-      <!-- <a href=""><button type="button" title="Open Password Input">^</button></a> -->
-      <br>
-      <input type="password" size="<% print(cols - 9); %>" name="cmd_password_input" id="cmd_password_input"
-             autofocus autocomplete="off" value="" placeholder="Password"/>
-      <!--<a href=""><button type="button" title="Open Password Input">v</button></a>-->
-      <br>
-      <input type="password" size="<% print(cols - 9); %>" name="cmd_password_input2" id="cmd_password_input2"
-             autofocus autocomplete="off" value="" placeholder="Password #2"/>
-      <!-- <a href=""><button type="button" title="Open Password Input">v</button></a>-->
-
+      <a href=""><button type="button" id="toggle_passwords_button" title="Open Password Input">v</button></a> 
+      <span id="passwords_div" class="hide_passwords">
+        <br>
+        <input type="password" size="<% print(cols - 9); %>" name="cmd_password_input" id="cmd_password_input"
+               autofocus autocomplete="off" value="" placeholder="Password #1"/>
+        <!--<a href=""><button type="button" title="Open Password Input">v</button></a>-->
+        <br>
+        <input type="password" size="<% print(cols - 9); %>" name="cmd_password_input2" id="cmd_password_input2"
+               autofocus autocomplete="off" value="" placeholder="Password #2"/>
+        <!-- <a href=""><button type="button" title="Open Password Input">v</button></a>-->
+      </span>
     </form>
   </body>
 </html>

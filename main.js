@@ -13,7 +13,7 @@ if(process.argv.length >= 3){
     PORT = process.argv[2]; }
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
-const NEW_CONTEXT = "\n==NEW CONTEXT==\n";
+const NEW_CONTEXT = "==NEW CONTEXT==";
 const config_regex = /^[A-Za-z0-9 ]*$/;
 
 // config is a whitespace separated list of tuples
@@ -183,7 +183,7 @@ function parseHist(hist_str){
     let result = [];
     for(let i=0; i<ctx_array.length; ++i){
         let ctx_str = ctx_array[i];
-        let hist_lines = ctx_str.split("\n\s*");
+        let hist_lines = ctx_str.split(/\s*\n\s*/g);
         result.push(hist_lines);
     }
     return result;
@@ -194,8 +194,8 @@ function dumpHist(hist){
     if(!hist) return "";
     //console.log('hist', hist);
     for(let i=0; i<hist.length; ++i){
-        //console.log('hist[i]', hist[i]);
-        result_array.push(hist[i].join("\n"));
+        console.log('hist[i]', hist[i]);
+        result_array.push(hist[i].map(function(s){ return s.trim()}).join("\n"));
     }
     return result_array.join(NEW_CONTEXT) + "\n";
 }
@@ -291,7 +291,8 @@ let server = http.createServer(function(request, response){
                 data.base_cmd_out = data.cmd_out;
                 data.cmd_out = `'${cmd}' started. Type 'exit' to exit.\n`;
                 data.app_name = cmd;
-                // data.cmd_hist += NEW_CONTEXT;
+                data.cmd_hist.push([]); // add a new layer of history.
+                console.log('data.cmd_hist', data.cmd_hist);
                 // when entering app, remove appname from args
                 args = args.slice(1);
                 data.app_state; }
@@ -301,7 +302,8 @@ let server = http.createServer(function(request, response){
                     data.cmd_out += "\n'" + data.app_name + "' terminated.";
                     data.base_cmd_out = "";
                     data.app_state = "";
-                    // data.cmd_hist = data.cmd_hist.substr(0, data.cmd_hist.lastIndexOf(NEW_CONTEXT));
+                    console.log('cmd_hist', data.cmd_hist);
+                    data.cmd_hist.pop(); // remove a layer of history.
                     data.app_name = ""; }
                 else{
                     // TODO handle data_context config parameter.

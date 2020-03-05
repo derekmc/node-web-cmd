@@ -28,9 +28,13 @@
       var cmd_list = "<%= cmd_list %>".split(' ');
       var hist_rows = [];
       var hist_index = -1; // hist indexes are negative, 0 is empty line.
+      var NEW_CONTEXT = "==NEW CONTEXT==\n";
       function init(){
         var app_name = document.getElementById("app_name").value;
-        var hist = document.getElementById(app_name.length? "app_hist" : "cmd_hist").value;
+        var hist = document.getElementById("cmd_hist").value;
+        var new_context_index = hist.lastIndexOf(NEW_CONTEXT);
+        if(new_context_index >=0 ){
+          hist = hist.substring(new_context_index + NEW_CONTEXT.length); }
         hist_rows = hist.split("\n");
         console.log("hist_rows", hist_rows);
         var cmd_text = document.getElementById("cmd_text");

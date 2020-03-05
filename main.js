@@ -188,6 +188,15 @@ function parseHist(hist_str){
     }
     return result;
 }
+function lastHistItem(history){
+    if(history.length == 0){
+        return ""; }
+    let last_context = history[history.length - 1];
+    if(last_context.length == 0){
+        return ""; }
+    let last_item = last_context[last_context.length - 1];
+    return last_item;
+}
 
 function dumpHist(hist){
     let result_array = [];
@@ -264,7 +273,9 @@ let server = http.createServer(function(request, response){
                         data.cmd_hist = [[]]; }
                     if(!data.cmd_hist.length){
                         data.cmd_hist.push([]); }
-                    data.cmd_hist[data.cmd_hist.length - 1].push(data.cmd_text);
+                    let last_hist_item = lastHistItem(data.cmd_hist);
+                    if(data.cmd_text != last_hist_item){
+                        data.cmd_hist[data.cmd_hist.length - 1].push(data.cmd_text); }
                 }
             }
 

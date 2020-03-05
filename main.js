@@ -201,9 +201,8 @@ function lastHistItem(history){
 function dumpHist(hist){
     let result_array = [];
     if(!hist) return "";
-    //console.log('hist', hist);
     for(let i=0; i<hist.length; ++i){
-        console.log('hist[i]', hist[i]);
+        // console.log('hist[i]', hist[i]);
         result_array.push(hist[i].map(function(s){ return s.trim()}).join("\n"));
     }
     return result_array.join(NEW_CONTEXT) + "\n";
@@ -303,7 +302,6 @@ let server = http.createServer(function(request, response){
                 data.cmd_out = `'${cmd}' started. Type 'exit' to exit.\n`;
                 data.app_name = cmd;
                 data.cmd_hist.push([]); // add a new layer of history.
-                console.log('data.cmd_hist', data.cmd_hist);
                 // when entering app, remove appname from args
                 args = args.slice(1);
                 data.app_state; }

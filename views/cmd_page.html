@@ -109,7 +109,7 @@
     </script>
   </head>
   <body>
-    <form method="POST">
+    <form method="POST" name="cmd_form">
       <textarea name="cmd_out"
                 rows="<%= rows %>"
                 cols="<%= cols %>"
@@ -124,9 +124,12 @@
       <br>
       <%= app_name %>
       <input type="text" name="cmd_text" id="cmd_text"
-             size="<% print(cols - 5 - (app_name.length? app_name.length + 1 : 0)); %>"
+             size="<% print(cols - 5 - (app_name.length? app_name.length + 8 : 0)); %>"
              autofocus autocomplete="off" value="" placeholder="Enter Command"/>
       <button type="submit">Run</button>
+      <% if(app_name.length > 0) { %>
+        <button type="button" onclick="cmd_text.value='exit'; document.forms['cmd_form'].submit()">Exit</button>
+      <% } %>
       <span id="passwords_div" class="hide_passwords">
       </span>
     </form>

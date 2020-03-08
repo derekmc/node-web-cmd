@@ -1,3 +1,4 @@
+password field should not be on form until open password input button is clicked. Right now it is hidden -- 20.03.08 10:57
 make a command that uses a database. -- 20.02.17 22:23
 send command list to client, for features like tab completion -- 20.02.15 08:30
 all password commands have a * prefix -- 20.02.13 05:16

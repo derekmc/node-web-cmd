@@ -17,12 +17,6 @@
       small{
         font-size: 65%;
       }
-      /*#passwords_div{
-        display: inline-block;
-      }*/
-      #passwords_div.hide_passwords {
-        display: none;
-      }
     </style>
     <script>
       var cmd_list = "<%= cmd_list %>".split(' ');
@@ -39,7 +33,7 @@
         console.log("hist_rows", hist_rows);
         var cmd_text = document.getElementById("cmd_text");
         cmd_text.addEventListener("keydown", keyDown);
-        document.getElementById("toggle_passwords_button").addEventListener("click", togglePasswords);
+        //document.getElementById("toggle_passwords_button").addEventListener("click", togglePasswords);
       }
       function editHistRow(){
         var cmd_text = document.getElementById("cmd_text");
@@ -66,19 +60,79 @@
         if(code == 38) upHist();
         if(code == 40) downHist();
       }
-      var HIDE_PASSWORDS = "hide_passwords";
-      function togglePasswords(event){
+      // var HIDE_PASSWORDS = "hide_passwords";
+      var PASSWORD_ID_REGEX = /\{\{password_id\}\}/g;
+      var password_inputs_html = 
+          '<input type="password" size="<% print(cols - 5); %>" name="cmd_password_input_{{password_id}}" id="cmd_password_input_{{password_id}}"' + 
+          '       autofocus autocomplete="off" value="" placeholder="Password #{{password_id}}"/>' + 
+          ' <button type="button" id="remove_password_button_{{password_id}}" title="Remove Password Input"' +
+          '        onclick="removePassword(event, {{password_id}})">X</button> ' +
+          '<br>';
+      var passwords_count = 0;
+
+      var PASSWORD_SPAN_PREFIX = "passwords_span_";
+      var PASSWORD_REMOVE_PREFIX = "remove_password_button_";
+      var PASSWORD_ID_PREFIX = "cmd_password_input_";
+      var PASSWORD_NAME_PREFIX = "cmd_password_input_";
+
+      function addPassword(event){
+          event.preventDefault();
+          ++passwords_count;
+          var div = document.getElementById("passwords_div");
+          var span = document.createElement('span');
+          var id = passwords_count - 1;
+          span.id = PASSWORD_SPAN_PREFIX  + id;
+          span.innerHTML = password_inputs_html.replace(PASSWORD_ID_REGEX, id);
+          div.appendChild(span);
+          return false;
+      }
+      function removePassword(event, id){
+          event.preventDefault();
+          --passwords_count;
+          var div = document.getElementById("passwords_div");
+          updatePasswordFields(div, id, "remove");
+          var old_span = document.getElementById(PASSWORD_SPAN_PREFIX + id);
+          if(old_span){
+              old_span.parentNode.removeChild(old_span); }
+          // change names
+          for(var i=id; i<passwords_count; ++i){
+              var old_span = document.getElementById(PASSWORD_SPAN_PREFIX + (i+1));
+              var old_input = document.getElementById(PASSWORD_ID_PREFIX + (i+1));
+              var old_button = document.getElementById(PASSWORD_REMOVE_PREFIX + (i+1)); 
+
+              if(old_span) old_span.id = PASSWORD_SPAN_PREFIX + i;
+              if(old_input){
+                  old_input.id = PASSWORD_ID_PREFIX + i;
+                  old_input.name = PASSWORD_NAME_PREFIX + i;
+                  old_input.placeholder = "Password #" + i; }
+              if(old_button){
+                  old_button.id = PASSWORD_REMOVE_PREFIX + i;
+                  old_button.setAttribute("onClick", "removePassword(event, " + i + ")"); }
+          }
+
+          return false;
+      }
+      function updatePasswordFields(div, id, action){
+          //for(var i=start; true; ++i){
+          //}
+
+          if(action == "add"){
+          }
+          else if(action == "remove"){
+          }
+          
+      }
+/*      function togglePasswords(event){
         var passwords_div = document.getElementById("passwords_div");
         var toggle_passwords_button = document.getElementById("toggle_passwords_button");
         if(passwords_div.classList.contains(HIDE_PASSWORDS)){
-          toggle_passwords_button.innerHTML = "^";
-          passwords_div.classList.remove(HIDE_PASSWORDS); }
+          toggle_passwords_button.innerHTML = "Remove Password";
+          passwords_div.innerHTML = ""; }
         else{
-          toggle_passwords_button.innerHTML = "v";
-          passwords_div.classList.add(HIDE_PASSWORDS); }
-        event.preventDefault();
+          toggle_passwords_button.innerHTML = "Add Password";
+          passwords_div.innerHTML = password_inputs_html; }
         return false;
-      }
+      }*/
       window.addEventListener("load", init);
     </script>
   </head>
@@ -98,20 +152,12 @@
       <br>
       <%= app_name %>
       <input type="text" name="cmd_text" id="cmd_text"
-             size="<% print(cols - 9 - (app_name.length? app_name.length + 1 : 0)); %>"
+             size="<% print(cols - 5 - (app_name.length? app_name.length + 1 : 0)); %>"
              autofocus autocomplete="off" value="" placeholder="Enter Command"/>
       <button type="submit">Run</button>
-      <a href=""><button type="button" id="toggle_passwords_button" title="Open Password Input">v</button></a> 
       <span id="passwords_div" class="hide_passwords">
-        <br>
-        <input type="password" size="<% print(cols - 9); %>" name="cmd_password_input" id="cmd_password_input"
-               autofocus autocomplete="off" value="" placeholder="Password #1"/>
-        <!--<a href=""><button type="button" title="Open Password Input">v</button></a>-->
-        <br>
-        <input type="password" size="<% print(cols - 9); %>" name="cmd_password_input2" id="cmd_password_input2"
-               autofocus autocomplete="off" value="" placeholder="Password #2"/>
-        <!-- <a href=""><button type="button" title="Open Password Input">v</button></a>-->
       </span>
     </form>
+    <button type="button" id="toggle_passwords_button" title="Add Password Input" onclick="addPassword(event);">Add Password</button> 
   </body>
 </html>

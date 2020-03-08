@@ -11,7 +11,7 @@ let Apps = {};
 const PORT = 8000;
 const DB_FILE = "webapp_data.json";
 const SAVE_INTERVAL = 10*1000;
-const VERBOSE = true;
+const VERBOSE = false;
 const PASSWORD_FIELD_PREFIX = "cmd_password_input_";
 
 db.load(DB_FILE, function(){
@@ -266,7 +266,7 @@ let server = http.createServer(function(request, response){
                     break; }
                 data.passwords.push(formData[field_name]);
             }
-            console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
+            // console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
             if(formData.config){
                 let post_config = parseConfig(formData.config);
                 data.config = mergeMap(data.config, post_config);

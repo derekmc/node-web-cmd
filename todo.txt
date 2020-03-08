@@ -6,6 +6,7 @@ full stack for appname and appstate. -- 20.02.13 04:42
 database/state contexts, set per command. -- 20.02.13 04:42
 newuser command -- 20.02.13 04:41
 breadcrumb trail for app context, ie stack, each context has a history and output buffer, but uses the same state. -- 20.03.08 13:05
+db should wrap a redis database, instead of just dumping json to a file. -- 20.03.08 16:49
 
 ## parse and handle form history and config -- 20.02.07 21:12 | 20.02.07 22:44 =
 ## make darkmode an alias for setting foreground and background colors. | 20.02.13 04:40 =

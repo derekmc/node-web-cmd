@@ -34,6 +34,9 @@ text arguments, a 'puts' function for writing output, and optionally a state arg
 //  args - the split command string
 //  puts - use this to print text to 'stdout' (shows in the 
 //  state - optional. useful for a webcall that is an app or otherwise has persistent state.
+//  app_context - array of strings used for navigation within the app
+//    each context is associated with a distinct command history and output buffer,
+//    and a breadcrumb is available for navigating the current context stack.
 function commandCallback(args, puts, state, app_context){
     puts("\nExample command output from 'commandCallback'.");
     if(!state){

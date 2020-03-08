@@ -1,3 +1,4 @@
+breadcrumb trail for app context, ie stack, each context has a history and output buffer, but uses the same state. -- 20.03.08 13:05
 make a command that uses a database. -- 20.02.17 22:23
 send command list to client, for features like tab completion -- 20.02.15 08:30
 all password commands have a * prefix -- 20.02.13 05:16

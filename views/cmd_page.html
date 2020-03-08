@@ -30,7 +30,6 @@
         if(new_context_index >=0 ){
           hist = hist.substring(new_context_index + NEW_CONTEXT.length); }
         hist_rows = hist.split("\n");
-        console.log("hist_rows", hist_rows);
         var cmd_text = document.getElementById("cmd_text");
         cmd_text.addEventListener("keydown", keyDown);
         //document.getElementById("toggle_passwords_button").addEventListener("click", togglePasswords);
@@ -42,17 +41,13 @@
           cmd_text.value = hist_rows[i]; }
       }
       function upHist(){
-        console.log('upHist');
         if(hist_index + hist_rows.length > 0){
           --hist_index; }
-        console.log('hist_index', hist_index);
         editHistRow();
       }
       function downHist(){
-        console.log('downHist');
         if(hist_index < -1){
           ++hist_index; }
-        console.log('hist_index', hist_index);
         editHistRow();
       }
       function keyDown(e){
@@ -62,12 +57,11 @@
       }
       // var HIDE_PASSWORDS = "hide_passwords";
       var PASSWORD_ID_REGEX = /\{\{password_id\}\}/g;
-      var password_inputs_html = 
+      var password_inputs_html = '<br/>' + 
           '<input type="password" size="<% print(cols - 5); %>" name="cmd_password_input_{{password_id}}" id="cmd_password_input_{{password_id}}"' + 
           '       autofocus autocomplete="off" value="" placeholder="Password #{{password_id}}"/>' + 
           ' <button type="button" id="remove_password_button_{{password_id}}" title="Remove Password Input"' +
-          '        onclick="removePassword(event, {{password_id}})">X</button> ' +
-          '<br>';
+          '        onclick="removePassword(event, {{password_id}})">X</button> ';
       var passwords_count = 0;
 
       var PASSWORD_SPAN_PREFIX = "passwords_span_";
@@ -90,7 +84,6 @@
           event.preventDefault();
           --passwords_count;
           var div = document.getElementById("passwords_div");
-          updatePasswordFields(div, id, "remove");
           var old_span = document.getElementById(PASSWORD_SPAN_PREFIX + id);
           if(old_span){
               old_span.parentNode.removeChild(old_span); }
@@ -112,27 +105,6 @@
 
           return false;
       }
-      function updatePasswordFields(div, id, action){
-          //for(var i=start; true; ++i){
-          //}
-
-          if(action == "add"){
-          }
-          else if(action == "remove"){
-          }
-          
-      }
-/*      function togglePasswords(event){
-        var passwords_div = document.getElementById("passwords_div");
-        var toggle_passwords_button = document.getElementById("toggle_passwords_button");
-        if(passwords_div.classList.contains(HIDE_PASSWORDS)){
-          toggle_passwords_button.innerHTML = "Remove Password";
-          passwords_div.innerHTML = ""; }
-        else{
-          toggle_passwords_button.innerHTML = "Add Password";
-          passwords_div.innerHTML = password_inputs_html; }
-        return false;
-      }*/
       window.addEventListener("load", init);
     </script>
   </head>

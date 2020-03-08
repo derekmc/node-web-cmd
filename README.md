@@ -34,7 +34,7 @@ text arguments, a 'puts' function for writing output, and optionally a state arg
 //  args - the split command string
 //  puts - use this to print text to 'stdout' (shows in the 
 //  state - optional. useful for a webcall that is an app or otherwise has persistent state.
-function commandCallback(args, puts, state){
+function commandCallback(args, puts, state, app_context){
     puts("\nExample command output from 'commandCallback'.");
     if(!state){
       state = {callCount: 0};
@@ -52,7 +52,7 @@ commands directly usable by client webapps that handle direct POST requests.
 
 ## TODO use [revision-db](https://github.com/derekmc/revision-db) for writing more involved webapps.
 ```javascript
-function advancedCallback(args, puts, db){
+function advancedCallback(args, puts, db, app_context){
     if(args[0] == 'usermod'){
         let user = args[1];
         db.getAll('user|' + user, function(kvr){

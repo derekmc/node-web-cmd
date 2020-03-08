@@ -6,7 +6,7 @@ function randint(n){
     return 1 + Math.floor(n * Math.random());
 }
 
-function guessApp(state, args, puts){
+function guessApp(args, puts, state){
     let max, n, guesses, max_guesses;
     if(state == ""){
         max = (args.length > 0 && parseInt(args[0]) > 0)? parseInt(args[0]) : DEFAULT_MAX;

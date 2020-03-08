@@ -32,7 +32,6 @@
         hist_rows = hist.split("\n");
         var cmd_text = document.getElementById("cmd_text");
         cmd_text.addEventListener("keydown", keyDown);
-        //document.getElementById("toggle_passwords_button").addEventListener("click", togglePasswords);
       }
       function editHistRow(){
         var cmd_text = document.getElementById("cmd_text");
@@ -133,6 +132,6 @@
       <span id="passwords_div" class="hide_passwords">
       </span>
     </form>
-    <button type="button" id="toggle_passwords_button" title="Add Password Input" onclick="addPassword(event);">Add Password</button> 
+    <button type="button" id="add_password_button" title="Add Password Input" onclick="addPassword(event);">Add Password</button> 
   </body>
 </html>

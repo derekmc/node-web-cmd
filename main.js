@@ -8,7 +8,17 @@ let HelpMessages = {};
 let Commands = {};
 let Aliases = {}
 let Apps = {};
-let PORT = 8000;
+const PORT = 8000;
+const DB_FILE = "webapp_data.json";
+const SAVE_INTERVAL = 10*1000;
+const VERBOSE = true;
+const PASSWORD_FIELD_PREFIX = "cmd_password_input_";
+
+db.load(DB_FILE, function(){
+   console.log('database loaded: ' + DB_FILE); });
+
+setInterval(()=>db.save(DB_FILE, ()=>{if(VERBOSE) console.log('database saved: ' + DB_FILE)}), SAVE_INTERVAL);
+
 if(process.argv.length >= 3){
     PORT = process.argv[2]; }
 
@@ -42,13 +52,20 @@ function escapeHtml(unsafe) {
 function loadCmd(filename, cmdname){
     // cmd(state, args, puts)
 }
+// TODO normal apps need to be wrapped special to use the
+// callback convention.
 function loadApp(appname, filename){
     app = require(filename);
     // app(state, args, puts, child_name, child_state) TODO
     Apps[appname] = app;
 }
 // a db app is just an app, with a wrapped database reference in a closure.
-function loadDataApp(db, filename, appname){
+// TODO should use callbacks.
+function loadDataApp(db, /*filename,*/ appname){
+    let app = require(filename);
+    Apps[appname] = function(args, puts, state, app_context){
+        return app(args, puts, state, db, app_context);
+    }
     // dataapp(db, args, puts)
 }
 loadApp('guess', './app/guess.js');
@@ -109,7 +126,7 @@ HelpMessages.config =
   " Type 'config' with no arguments to see current config.\n";
 
 // Commands modify state in place, apps do not.
-Commands.config = function(state, args, puts){
+Commands.config = function(args, puts, state){
     if(args.length == 1){
         let index = 0;
         for(var k in state.config){
@@ -242,6 +259,14 @@ let server = http.createServer(function(request, response){
 
             let cmd_text = "";
             // handle form data to modify local variables and 
+            data.passwords = [];
+            for(var i=0; true; ++i){
+                let field_name = PASSWORD_FIELD_PREFIX + i;
+                if(!formData[field_name]){
+                    break; }
+                data.passwords.push(formData[field_name]);
+            }
+            console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
             if(formData.config){
                 let post_config = parseConfig(formData.config);
                 data.config = mergeMap(data.config, post_config);
@@ -316,7 +341,8 @@ let server = http.createServer(function(request, response){
                     data.app_name = ""; }
                 else{
                     // TODO handle data_context config parameter.
-                    data.app_state = Apps[data.app_name](data.app_state, args, puts); }}
+                    // TODO handle app_context.
+                    data.app_state = Apps[data.app_name](args, puts, data.app_state); }}
             else if(cmd in Commands){
                 // data.app_name = "test app_name";
                 Commands[cmd](data, args, _puts); }

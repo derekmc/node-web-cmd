@@ -59,6 +59,7 @@ function loadApp(appname, filename){
     // app(state, args, puts, child_name, child_state) TODO
     Apps[appname] = app;
 }
+// TODO only sudo apps have access to password input.
 // a db app is just an app, with a wrapped database reference in a closure.
 // TODO should use callbacks.
 function loadDataApp(db, /*filename,*/ appname){

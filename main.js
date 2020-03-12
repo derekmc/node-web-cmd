@@ -82,7 +82,7 @@ Aliases.tall = 'config rows 33 cols 54';
 
 HelpMessages.help = "Show help for a command. Example: \"help config\".";
 
-Commands.help = function(state, args, puts){
+Commands.help = function(args, puts, state){
     if(args.length == 1){
         let cmdlist = [];
         let applist = getKeys(Apps);
@@ -95,7 +95,8 @@ Commands.help = function(state, args, puts){
             let list = lists[listname];
             for(let i=0; i<list.length; ){
                 if(i > 0){ // one less on first row only.
-                    row.push(list[i]); }
+                    row.push(list[i]);
+                    ++i; }
                 if(i < list.length){
                     for(let j=0; j<CMD_ROW - 1; ++j){
                         row.push(list[i]);
@@ -346,7 +347,7 @@ let server = http.createServer(function(request, response){
                     data.app_state = Apps[data.app_name](args, puts, data.app_state); }}
             else if(cmd in Commands){
                 // data.app_name = "test app_name";
-                Commands[cmd](data, args, _puts); }
+                Commands[cmd](args, _puts, data); }
             else{
                 puts(" Unknown command: '" + cmd + "'"); }}
         // wrap puts to start all lines with a space.

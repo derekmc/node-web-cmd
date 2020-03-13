@@ -252,62 +252,70 @@ let server = http.createServer(function(request, response){
             }
         });
         request.on('end', function(){
-            let formData = qs.parse(requestBody);
-            // console.log('secret_input', formData.secret_input);
+            try{
+                let formData = qs.parse(requestBody);
+                // console.log('secret_input', formData.secret_input);
 
-            // santize all form fields for html characters.
-            for(let k in formData){
-                formData[k] = escapeHtml(formData[k]); }
+                // santize all form fields for html characters.
+                for(let k in formData){
+                    formData[k] = escapeHtml(formData[k]); }
 
-            let cmd_text = "";
-            // handle form data to modify local variables and 
-            data.passwords = [];
-            for(var i=0; true; ++i){
-                let field_name = PASSWORD_FIELD_PREFIX + i;
-                if(!formData[field_name]){
-                    break; }
-                data.passwords.push(formData[field_name]);
-            }
-            // console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
-            if(formData.config){
-                let post_config = parseConfig(formData.config);
-                data.config = mergeMap(data.config, post_config);
-            }
-            if(formData.cmd_out){
-                data.cmd_out = formData.cmd_out;
-            }
-            if(formData.base_cmd_out){
-                data.base_cmd_out = formData.base_cmd_out;
-            }
-            if(formData.cmd_hist){
-                data.cmd_hist = parseHist(formData.cmd_hist);
-            }
-            // TODO do we want an app stack?
-            // when an app in the app stack returns,
-            // the child app_name and child app_state
-            // are passed as extra parameters to the app.
-            if(formData.app_name){
-                data.app_name = formData.app_name;
-            }
-            if(formData.app_state){
-                data.app_state = formData.app_state;
-            }
-            if(formData.cmd_text){
-                data.cmd_text = formData.cmd_text;
-                if(data.cmd_text.length){
-                    if(!data.cmd_hist){
-                        data.cmd_hist = [[]]; }
-                    if(!data.cmd_hist.length){
-                        data.cmd_hist.push([]); }
-                    let last_hist_item = lastHistItem(data.cmd_hist);
-                    if(data.cmd_text != last_hist_item){
-                        data.cmd_hist[data.cmd_hist.length - 1].push(data.cmd_text); }
+                let cmd_text = "";
+                // handle form data to modify local variables and 
+                data.passwords = [];
+                for(var i=0; true; ++i){
+                    let field_name = PASSWORD_FIELD_PREFIX + i;
+                    if(!formData[field_name]){
+                        break; }
+                    data.passwords.push(formData[field_name]);
                 }
-            }
+                // console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
+                if(formData.config){
+                    let post_config = parseConfig(formData.config);
+                    data.config = mergeMap(data.config, post_config);
+                }
+                if(formData.cmd_out){
+                    data.cmd_out = formData.cmd_out;
+                }
+                if(formData.base_cmd_out){
+                    data.base_cmd_out = formData.base_cmd_out;
+                }
+                if(formData.cmd_hist){
+                    data.cmd_hist = parseHist(formData.cmd_hist);
+                }
+                // TODO do we want an app stack?
+                // when an app in the app stack returns,
+                // the child app_name and child app_state
+                // are passed as extra parameters to the app.
+                if(formData.app_name){
+                    data.app_name = formData.app_name;
+                }
+                if(formData.app_state){
+                    data.app_state = formData.app_state;
+                }
+                if(formData.cmd_text){
+                    data.cmd_text = formData.cmd_text;
+                    if(data.cmd_text.length){
+                        if(!data.cmd_hist){
+                            data.cmd_hist = [[]]; }
+                        if(!data.cmd_hist.length){
+                            data.cmd_hist.push([]); }
+                        let last_hist_item = lastHistItem(data.cmd_hist);
+                        if(data.cmd_text != last_hist_item){
+                            data.cmd_hist[data.cmd_hist.length - 1].push(data.cmd_text); }
+                    }
+                }
 
-            let puts = function(s){ data.cmd_out += "\n" + s; }
-            handleCommand(data, data.cmd_text, puts);
-            cmdPage(data);
+                let puts = function(s){ data.cmd_out += "\n" + s; }
+                handleCommand(data, data.cmd_text, puts);
+                cmdPage(data);
+            }
+            catch(error){
+                console.error('Error handling request.', error);
+                response.writeHead(500, {"Content-Type": "text/html"});
+                let html = "<h1>Unhandled error.</h1>";
+                response.end(html);
+            }
         });
     }
     function handleCommand(data, cmd_text, puts){
@@ -338,7 +346,7 @@ let server = http.createServer(function(request, response){
                     data.cmd_out += "\n'" + data.app_name + "' terminated.";
                     data.base_cmd_out = "";
                     data.app_state = "";
-                    console.log('cmd_hist', data.cmd_hist);
+                    // console.log('cmd_hist', data.cmd_hist);
                     data.cmd_hist.pop(); // remove a layer of history.
                     data.app_name = ""; }
                 else{

@@ -8,7 +8,10 @@ let HelpMessages = {};
 let Commands = {};
 let Aliases = {}
 let Apps = {};
-const PORT = 8000;
+let PORT = 8000;
+if(process.argv.length >= 3){
+    PORT = process.argv[2]; }
+
 const DB_FILE = "webapp_data.json";
 const SAVE_INTERVAL = 10*1000;
 const VERBOSE = false;
@@ -18,9 +21,6 @@ db.load(DB_FILE, function(){
    console.log('database loaded: ' + DB_FILE); });
 
 setInterval(()=>db.save(DB_FILE, ()=>{if(VERBOSE) console.log('database saved: ' + DB_FILE)}), SAVE_INTERVAL);
-
-if(process.argv.length >= 3){
-    PORT = process.argv[2]; }
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
 const NEW_CONTEXT = "==NEW CONTEXT==";

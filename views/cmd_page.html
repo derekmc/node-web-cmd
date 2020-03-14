@@ -24,6 +24,7 @@
       var hist_index = -1; // hist indexes are negative, 0 is empty line.
       var NEW_CONTEXT = "==NEW CONTEXT==\n";
       function init(){
+        try{ initPasswordFields(); } catch(e){ }
         var app_name = document.getElementById("app_name").value;
         var hist = document.getElementById("cmd_hist").value;
         var new_context_index = hist.lastIndexOf(NEW_CONTEXT);
@@ -32,6 +33,7 @@
         hist_rows = hist.split("\n");
         var cmd_text = document.getElementById("cmd_text");
         cmd_text.addEventListener("keydown", keyDown);
+        cmd_text.focus();
       }
       function editHistRow(){
         var cmd_text = document.getElementById("cmd_text");
@@ -58,7 +60,7 @@
       var PASSWORD_ID_REGEX = /\{\{password_id\}\}/g;
       var password_inputs_html = '<br/>' + 
           '<input type="password" size="<% print(cols - 5); %>" name="cmd_password_input_{{password_id}}" id="cmd_password_input_{{password_id}}"' + 
-          '       autofocus autocomplete="off" value="" placeholder="Password #{{password_id}}"/>' + 
+          '       autocomplete="off" value="" placeholder="Password #{{password_id}}"/>' + 
           ' <button type="button" id="remove_password_button_{{password_id}}" title="Remove Password Input"' +
           '        onclick="removePassword(event, {{password_id}})">X</button> ';
       var passwords_count = 0;
@@ -73,11 +75,18 @@
           ++passwords_count;
           var div = document.getElementById("passwords_div");
           var span = document.createElement('span');
-          var id = passwords_count - 1;
+          var id = passwords_count;
           span.id = PASSWORD_SPAN_PREFIX  + id;
           span.innerHTML = password_inputs_html.replace(PASSWORD_ID_REGEX, id);
           div.appendChild(span);
           return false;
+      }
+      // if javascript is available, replace the two default password fields
+      // with a button to add passwords.
+      function initPasswordFields(){
+          document.getElementById('passwords_div').innerHTML = "";
+          document.body.innerHTML += 
+              '<button type="button" id="add_password_button" title="Add Password Input" onclick="addPassword(event);">Password</button>';
       }
       function removePassword(event, id){
           event.preventDefault();
@@ -87,7 +96,7 @@
           if(old_span){
               old_span.parentNode.removeChild(old_span); }
           // change names
-          for(var i=id; i<passwords_count; ++i){
+          for(var i=id; i<=passwords_count; ++i){
               var old_span = document.getElementById(PASSWORD_SPAN_PREFIX + (i+1));
               var old_input = document.getElementById(PASSWORD_ID_PREFIX + (i+1));
               var old_button = document.getElementById(PASSWORD_REMOVE_PREFIX + (i+1)); 
@@ -118,20 +127,24 @@
       <input type="hidden" name="base_cmd_out" id="base_cmd_out" value="<%= base_cmd_out %>" />
       <input type="hidden" name="cmd_hist" id="cmd_hist" value="<%= cmd_hist %>" />
       <input type="hidden" name="app_name" id="app_name" value="<%= app_name %>" />
-      <input type="hidden" name="session_token" id="session_token" value="<%= session_token %>" />
       <input type="hidden" name="config" id="config" value="<%= config %>" />
       <br>
       <%= app_name %>
       <input type="text" name="cmd_text" id="cmd_text"
              size="<% print(cols - 5 - (app_name.length? app_name.length + 8 : 0)); %>"
-             autofocus autocomplete="off" value="" placeholder="Enter Command"/>
+             autofocus="" autocomplete="off" value="" placeholder="Enter Command"/>
       <button type="submit">Run</button>
       <% if(app_name.length > 0) { %>
         <button type="button" onclick="cmd_text.value='exit'; document.forms['cmd_form'].submit()">Exit</button>
       <% } %>
       <span id="passwords_div" class="hide_passwords">
+        <span id="passwords_span_1">
+          <br><input type="password" size="49" name="cmd_password_input_1" id="cmd_password_input_1" autocomplete="off" value="" placeholder="Password #1">
+        </span>
+        <span id="passwords_span_2">
+          <br><input type="password" size="49" name="cmd_password_input_2" id="cmd_password_input_2" autocomplete="off" value="" placeholder="Password #2">
+        </span>
       </span>
     </form>
-    <button type="button" id="add_password_button" title="Add Password Input" onclick="addPassword(event);">Add Password</button> 
   </body>
 </html>

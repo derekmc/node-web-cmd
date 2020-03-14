@@ -14,10 +14,11 @@ if(process.argv.length >= 3){
 
 const DB_FILE = "webapp_data.json";
 const SAVE_INTERVAL = 10*1000;
-const VERBOSE = true;
+const VERBOSE = false;
 const PASSWORD_FIELD_PREFIX = "cmd_password_input_";
 const APP_DATA = "app_data|";
 const SESSION_TOKEN_LEN = 20;
+const SESSION_COOKIE_NAME = "SESSION_COOKIE";
 
 db.load(DB_FILE, function(){
    console.log('database loaded: ' + DB_FILE); });
@@ -249,8 +250,28 @@ let server = http.createServer(function(request, response){
         "cmd_hist" : parseHist(DEFAULT_HIST),
         "app_name" : "",
         "app_state" : "",
-        "session_token": "",
+        "session_cookie": "",
     }
+
+    
+    // console.log('headers', request.headers);
+    if(request.headers.hasOwnProperty('cookie')){
+        let cookies = request.headers['cookie']
+        let parts = cookies.split(/\;\s*/g);
+        for(let i=0; i<parts.length; ++i){
+            let part = parts[i];
+            let index = part.indexOf("=");
+            if(index > 0){
+                let key = part.substr(0, index).trim();
+                let value = part.substr(index+1).trim();
+                //console.log('key value', key, value);
+                if(key == SESSION_COOKIE_NAME){
+                    data.session_cookie = value; }
+            }
+        }
+    }
+
+
 
     if(request.method == "GET"){
         response.writeHead(200, {"Content-Type": "text/html"});
@@ -277,7 +298,7 @@ let server = http.createServer(function(request, response){
                 let cmd_text = "";
                 // handle form data to modify local variables and 
                 data.passwords = [];
-                for(var i=0; true; ++i){
+                for(var i=1; true; ++i){
                     let field_name = PASSWORD_FIELD_PREFIX + i;
                     if(!formData[field_name]){
                         break; }
@@ -285,11 +306,11 @@ let server = http.createServer(function(request, response){
                 }
                 // console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
                 // session token must match the allowed characters, but could otherwise be forged.
-                if(formData.session_token && alphanum_regex.test(formData.session_token)){
-                    data.session_token = formData.session_token;
+                if(formData.session_cookie && alphanum_regex.test(formData.session_cookie)){
+                    data.session_cookie = formData.session_cookie;
                 }
                 else{
-                    data.session_token = randstr(ALPHANUMS, SESSION_TOKEN_LEN);
+                    data.session_cookie = randstr(ALPHANUMS, SESSION_TOKEN_LEN);
                 }
                 if(formData.config){
                     let post_config = parseConfig(formData.config);
@@ -374,7 +395,7 @@ let server = http.createServer(function(request, response){
                         app_state = Apps[data.app_name](args, puts,
                             {app_state: app_state,
                              passwords: data.passwords,
-                             session_token: data.session_token});
+                             session_cookie: data.session_cookie});
                         // console.log('app_state', app_state);
                         db.set(APP_DATA + data.app_name, app_state);
                     });
@@ -410,7 +431,7 @@ let server = http.createServer(function(request, response){
         template_data.config = dumpConfig(data.config);
         template_data.app_name = data.app_name;
         template_data.app_state = data.app_state;
-        template_data.session_token = data.session_token;
+        template_data.session_cookie = data.session_cookie;
 
         // add config vars to rendering data context.
         for(let key in data.config){

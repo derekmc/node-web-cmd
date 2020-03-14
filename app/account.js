@@ -4,7 +4,10 @@ module.exports = accountApp;
 // TODO only sudo apps accept password inputs.
 accountApp.is_sudo = true;
 // TODO rewrite callback style.
-function accountApp(args, puts, state, db, app_context, passwords){
+function accountApp(args, puts, data){
+    let state = data.app_state;
+    // let app_context = data.app_context? app_context;
+    let passwords = data.passwords;
     /*
     let args = params.args;
     let puts = params.puts;
@@ -17,6 +20,7 @@ function accountApp(args, puts, state, db, app_context, passwords){
     if(!args.length) return;
     let cmd = args[0];
     if(cmd == "new"){
+        
     }
     if(cmd == "login"){
     }
@@ -24,4 +28,6 @@ function accountApp(args, puts, state, db, app_context, passwords){
     }
     if(cmd == "delete"){
     }
+
+    return state;
 }

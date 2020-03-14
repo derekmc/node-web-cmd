@@ -31,13 +31,15 @@ exports.load = function(filename, next){
 }
 // for now, this only uses get and set callbacks with in memory data.
 exports.get = function(key, next){
-    if(!next || (typeof next != 'function')) throw new Error('no next func');
+    if(!next) next = function(){}
+    if(typeof next != 'function') throw new Error('no next func');
     next(__data[key]);
 }
 
 // setNew forces it to be a newkey.
 exports.set = function(key, value, next){
-    if(!next || (typeof next != 'function')) throw new Error('no next func');
+    if(!next) next = function(){}
+    if(typeof next != 'function') throw new Error('no next func');
     if(value === undefined){
         delete __data[key]; }
     else{

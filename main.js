@@ -14,8 +14,10 @@ if(process.argv.length >= 3){
 
 const DB_FILE = "webapp_data.json";
 const SAVE_INTERVAL = 10*1000;
-const VERBOSE = false;
+const VERBOSE = true;
 const PASSWORD_FIELD_PREFIX = "cmd_password_input_";
+const APP_DATA = "app_data|";
+const SESSION_TOKEN_LEN = 20;
 
 db.load(DB_FILE, function(){
    console.log('database loaded: ' + DB_FILE); });
@@ -24,7 +26,7 @@ setInterval(()=>db.save(DB_FILE, ()=>{if(VERBOSE) console.log('database saved: '
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
 const NEW_CONTEXT = "==NEW CONTEXT==";
-const config_regex = /^[A-Za-z0-9 ]*$/;
+const alphanum_regex = /^[A-Za-z0-9 ]*$/;
 
 // config is a whitespace separated list of tuples
 // TODO allow setting the data context with config: 'browser', 'cookie', 'user', or 'session'
@@ -32,6 +34,16 @@ const config_regex = /^[A-Za-z0-9 ]*$/;
 const DEFAULT_CONFIG = "rows 19 cols 54 fg 000 bg fff";
 const DEFAULT_HIST = "help";
 const DEFAULT_CMDOUT = "Type 'help' for help.";
+const ALPHANUMS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+
+function randstr(chars, len){
+    let s = "";
+    for(let i=0; i<len; ++i){
+        s += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return s;
+}
 
 // sanitize all fields
 // TODO make sure this sanitization is sufficient and accurate.
@@ -60,7 +72,8 @@ function loadApp(appname, filename){
     Apps[appname] = app;
 }
 // TODO only sudo apps have access to password input.
-// a db app is just an app, with a wrapped database reference in a closure.
+// a db app is just an app, but with access to a global state object,
+// and not per session state.
 // TODO should use callbacks.
 function loadDataApp(db, /*filename,*/ appname){
     let app = require(filename);
@@ -135,7 +148,7 @@ Commands.config = function(args, puts, state){
             puts(k + " " + state.config[k]); }
         return; }
     let config_str = args.slice(1).join(" ");
-    if(!config_regex.test(config_str)){
+    if(!alphanum_regex.test(config_str)){
         puts("'config' only allows alphanumeric values.");
         return; }
     let new_config = parseConfig(config_str);
@@ -236,6 +249,7 @@ let server = http.createServer(function(request, response){
         "cmd_hist" : parseHist(DEFAULT_HIST),
         "app_name" : "",
         "app_state" : "",
+        "session_token": "",
     }
 
     if(request.method == "GET"){
@@ -270,6 +284,13 @@ let server = http.createServer(function(request, response){
                     data.passwords.push(formData[field_name]);
                 }
                 // console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
+                // session token must match the allowed characters, but could otherwise be forged.
+                if(formData.session_token && alphanum_regex.test(formData.session_token)){
+                    data.session_token = formData.session_token;
+                }
+                else{
+                    data.session_token = randstr(ALPHANUMS, SESSION_TOKEN_LEN);
+                }
                 if(formData.config){
                     let post_config = parseConfig(formData.config);
                     data.config = mergeMap(data.config, post_config);
@@ -289,9 +310,6 @@ let server = http.createServer(function(request, response){
                 // are passed as extra parameters to the app.
                 if(formData.app_name){
                     data.app_name = formData.app_name;
-                }
-                if(formData.app_state){
-                    data.app_state = formData.app_state;
                 }
                 if(formData.cmd_text){
                     data.cmd_text = formData.cmd_text;
@@ -352,7 +370,16 @@ let server = http.createServer(function(request, response){
                 else{
                     // TODO handle data_context config parameter.
                     // TODO handle app_context.
-                    data.app_state = Apps[data.app_name](args, puts, data.app_state); }}
+                    db.get(APP_DATA + data.app_name, function(app_state){
+                        app_state = Apps[data.app_name](args, puts,
+                            {app_state: app_state,
+                             passwords: data.passwords,
+                             session_token: data.session_token});
+                        // console.log('app_state', app_state);
+                        db.set(APP_DATA + data.app_name, app_state);
+                    });
+                }
+            }
             else if(cmd in Commands){
                 // data.app_name = "test app_name";
                 Commands[cmd](args, _puts, data); }
@@ -383,6 +410,7 @@ let server = http.createServer(function(request, response){
         template_data.config = dumpConfig(data.config);
         template_data.app_name = data.app_name;
         template_data.app_state = data.app_state;
+        template_data.session_token = data.session_token;
 
         // add config vars to rendering data context.
         for(let key in data.config){

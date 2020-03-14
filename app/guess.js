@@ -6,16 +6,22 @@ function randint(n){
     return 1 + Math.floor(n * Math.random());
 }
 
-function guessApp(args, puts, state){
+function guessApp(args, puts, data){
     let max, n, guesses, max_guesses;
-    if(state == ""){
+    let state = data.app_state;
+    let session_token = data.session_token;
+    if(state == null){
+        state = {};
+    }
+    let user_state = (session_token in state)? state[session_token] : "";
+    if(user_state == ""){
         max = (args.length > 0 && parseInt(args[0]) > 0)? parseInt(args[0]) : DEFAULT_MAX;
         n = randint(max)
         guesses = -1;
         max_guesses = Math.max(1, Math.floor(Math.log2(max) - 0.285));
     }
     else{
-        let data = state.split(/,\s*/);
+        let data = user_state.split(/,\s*/);
         max = parseInt(data[0]);
         n = parseInt(data[1]);
         guesses = parseInt(data[2]);
@@ -39,11 +45,12 @@ function guessApp(args, puts, state){
     remaining = max_guesses - guesses;
 
     if(guess == n || remaining == 0){
-        state = ""; }
+        user_state = ""; }
     else{
         msg += ` You have ${remaining} more tries.`;
-        state = [max, n, guesses, max_guesses].join(', ');
+        user_state = [max, n, guesses, max_guesses].join(', ');
     }
     puts(msg);
+    state[session_token] = user_state;
     return state;
 }

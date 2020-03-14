@@ -252,6 +252,7 @@ let server = http.createServer(function(request, response){
         "app_state" : "",
         "session_cookie": "",
     }
+    let headers = {"Content-Type": "text/html"};
 
     
     // console.log('headers', request.headers);
@@ -266,15 +267,20 @@ let server = http.createServer(function(request, response){
                 let value = part.substr(index+1).trim();
                 //console.log('key value', key, value);
                 if(key == SESSION_COOKIE_NAME){
-                    data.session_cookie = value; }
+                   if(alphanum_regex.test(value)){
+                      data.session_cookie = value; }}
             }
         }
+    }
+    if(data.session_cookie == ""){
+        data.session_cookie = randstr(ALPHANUMS, SESSION_TOKEN_LEN);
+        headers['Set-Cookie'] = SESSION_COOKIE_NAME + "=" + data.session_cookie + ";";
     }
 
 
 
     if(request.method == "GET"){
-        response.writeHead(200, {"Content-Type": "text/html"});
+        response.writeHead(200, headers);
         cmdPage(data);
     }
     if(request.method == "POST"){
@@ -310,7 +316,6 @@ let server = http.createServer(function(request, response){
                     data.session_cookie = formData.session_cookie;
                 }
                 else{
-                    data.session_cookie = randstr(ALPHANUMS, SESSION_TOKEN_LEN);
                 }
                 if(formData.config){
                     let post_config = parseConfig(formData.config);
@@ -438,7 +443,7 @@ let server = http.createServer(function(request, response){
             template_data[key] = data.config[key];
         }
 
-        response.writeHead(200, {"Content-Type": "text/html"});
+        response.writeHead(200, headers);
         let html = cmd_page(template_data);
         response.end(html);
     }

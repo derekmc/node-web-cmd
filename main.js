@@ -72,18 +72,39 @@ function loadApp(appname, filename){
     // app(state, args, puts, child_name, child_state) TODO
     Apps[appname] = app;
 }
+
+// 
+
+// wrap the app to keep per user/ per session state.
+function loadUserApp(appname, filename){
+    app = require(filename);
+    Apps[appname] = function(args, puts, data){
+        let state = data.app_state;
+        let session_cookie = data.session_cookie;
+        if(state == null || !state.user_states){
+            state = {user_states:{}};
+        }
+        // todo wrap in another datastructure.
+        let user_state = (session_cookie in state.user_states)? state.user_states[session_cookie] : null;
+
+        user_state = app(args, puts, {user_state: user_state});
+        state.user_states[session_cookie] = user_state;
+        return state;
+    }
+}
+
 // TODO only sudo apps have access to password input.
 // a db app is just an app, but with access to a global state object,
 // and not per session state.
 // TODO should use callbacks.
-function loadDataApp(db, /*filename,*/ appname){
-    let app = require(filename);
-    Apps[appname] = function(args, puts, state, app_context){
-        return app(args, puts, state, db, app_context);
-    }
-    // dataapp(db, args, puts)
-}
-loadApp('guess', './app/guess.js');
+// function loadDataApp(db, /*filename,*/ appname){
+//    let app = require(filename);
+//    Apps[appname] = function(args, puts, state, app_context){
+//        return app(args, puts, state, db, app_context);
+//    }
+//    // dataapp(db, args, puts)
+//}
+loadUserApp('guess', './app/guess.js');
 console.log('apps', Apps)
 
 Aliases.dark = 'config bg 000 fg fff';

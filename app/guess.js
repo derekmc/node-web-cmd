@@ -8,13 +8,8 @@ function randint(n){
 
 function guessApp(args, puts, data){
     let max, n, guesses, max_guesses;
-    let state = data.app_state;
-    let session_token = data.session_token;
-    if(state == null){
-        state = {};
-    }
-    let user_state = (session_token in state)? state[session_token] : "";
-    if(user_state == ""){
+    let user_state = data.user_state;
+    if(user_state == null || user_state == ""){
         max = (args.length > 0 && parseInt(args[0]) > 0)? parseInt(args[0]) : DEFAULT_MAX;
         n = randint(max)
         guesses = -1;
@@ -51,6 +46,5 @@ function guessApp(args, puts, data){
         user_state = [max, n, guesses, max_guesses].join(', ');
     }
     puts(msg);
-    state[session_token] = user_state;
-    return state;
+    return user_state;
 }

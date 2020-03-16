@@ -29,22 +29,75 @@ exports.load = function(filename, next){
         next();
     })
 }
+// destructuring get and set, can use arrays or sets of objects.
 // for now, this only uses get and set callbacks with in memory data.
 exports.get = function(key, next){
     if(!next) next = function(){}
     if(typeof next != 'function') throw new Error('no next func');
-    next(__data[key]);
+    let keytype = typeof key;
+
+    let result;
+    if(keytype == "object"){
+        if(Array.isArray(key)){
+            result = [];
+            for(let i=0; i<key.length; ++i){
+                result[i] = __data[key[i]]; }}
+        else{
+            result = {};
+            for(let k in key){
+                result[k] = __data[key[k]]; }}}
+    else{
+        result = __data[key];
+    }
+    return next(result);
 }
 
 // setNew forces it to be a newkey.
 exports.set = function(key, value, next){
     if(!next) next = function(){}
     if(typeof next != 'function') throw new Error('no next func');
-    if(value === undefined){
-        delete __data[key]; }
+    let keytype = typeof key;
+
+    if(keytype == "object"){
+        if(Array.isArray(key)){
+            if(typeof value != "object"){
+                throw new Error("db.js: destructursing 'set' call requires value type to match key type 'array'"); }
+            if(!Array.isArray(value)){
+                throw new Error("db.js: destructursing 'set' call requires value type to match key type 'array'"); }
+            if(key.length != value.length){
+                throw new Error("db.js: destructursing 'set' call requires value array length to match key array length."); }
+            for(let i=0; i<key.length; ++i){
+                let k = key[i];
+                let v = value[i];
+                if(v === undefined){
+                    delete __data[k];}
+                else{
+                    __data[k] = v; }}
+        } 
+        else{
+            if(typeof value != "object"){
+                throw new Error("db.js: destructursing 'set' call requires value type to match key type 'object'"); }
+            if(Array.isArray(value)){
+                throw new Error("db.js: destructursing 'set' call requires value type to match key type 'object'"); }
+            for(let k in key){
+                if(!(k in value)){
+                    throw new Error("db.js: destructursing 'set' call requires value key for key key '" + k + "'"); }
+                let _k = key[k];
+                let _v = value[k];
+                if(v === undefined){
+                    delete __data[_k]; }
+                else{
+                    __data[_k] = _v; }
+            }
+        }
+    }
     else{
-        __data[key] = value; }
-    next();
+        if(value === undefined){
+            delete __data[key]; }
+        else{
+            __data[key] = value; }
+    }
+    return next();
 }
 
 function randstr(chars, len){

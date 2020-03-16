@@ -17,7 +17,12 @@ const SAVE_INTERVAL = 10*1000;
 const VERBOSE = false;
 const PASSWORD_FIELD_PREFIX = "cmd_password_input_";
 const APP_DATA = "app_data|";
-const SESSION_TOKEN_LEN = 20;
+// map of session_cookie to user_ids.  Guest sessions have empty string id: "".
+// if it's a guest session, store the app user_data by session_cookie, and not user_id.
+const USER_SESSIONS = "user_sessions";
+const USER_INFOS = "user_infos"; // map of user_ids, to salt, password_hash, etc.
+const SESSION_COOKIE_LEN = 20;
+const USER_ID_LEN = 10;
 const SESSION_COOKIE_NAME = "SESSION_COOKIE";
 
 db.load(DB_FILE, function(){
@@ -80,15 +85,15 @@ function loadUserApp(appname, filename){
     app = require(filename);
     Apps[appname] = function(args, puts, data){
         let state = data.app_state;
-        let session_cookie = data.session_cookie;
+        let user_key = data.user_key;
         if(state == null || !state.user_states){
             state = {user_states:{}};
         }
         // todo wrap in another datastructure.
-        let user_state = (session_cookie in state.user_states)? state.user_states[session_cookie] : null;
+        let user_state = (user_key in state.user_states)? state.user_states[user_key] : null;
 
         user_state = app(args, puts, {user_state: user_state});
-        state.user_states[session_cookie] = user_state;
+        state.user_states[user_key] = user_state;
         return state;
     }
 }
@@ -293,10 +298,15 @@ let server = http.createServer(function(request, response){
             }
         }
     }
-    if(data.session_cookie == ""){
-        data.session_cookie = randstr(ALPHANUMS, SESSION_TOKEN_LEN);
-        headers['Set-Cookie'] = SESSION_COOKIE_NAME + "=" + data.session_cookie + ";";
-    }
+    db.get({user_sessions: USER_SESSIONS}, function(result){
+        if(data.session_cookie == ""){
+            data.session_cookie = randstr(ALPHANUMS, SESSION_COOKIE_LEN);
+            if(result.user_sessions == undefined){
+                result.user_sessions = {data.session_cookie : ""}; }
+            db.set({user_sessions:USER_SESSIONS}, result); 
+            headers['Set-Cookie'] = SESSION_COOKIE_NAME + "=" + data.session_cookie + ";";
+        }
+    });
 
 
 
@@ -333,11 +343,6 @@ let server = http.createServer(function(request, response){
                 }
                 // console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
                 // session token must match the allowed characters, but could otherwise be forged.
-                if(formData.session_cookie && alphanum_regex.test(formData.session_cookie)){
-                    data.session_cookie = formData.session_cookie;
-                }
-                else{
-                }
                 if(formData.config){
                     let post_config = parseConfig(formData.config);
                     data.config = mergeMap(data.config, post_config);
@@ -417,14 +422,22 @@ let server = http.createServer(function(request, response){
                 else{
                     // TODO handle data_context config parameter.
                     // TODO handle app_context.
-                    db.get(APP_DATA + data.app_name, function(app_state){
-                        app_state = Apps[data.app_name](args, puts,
-                            {app_state: app_state,
-                             passwords: data.passwords,
-                             session_cookie: data.session_cookie});
-                        // console.log('app_state', app_state);
-                        db.set(APP_DATA + data.app_name, app_state);
-                    });
+                    // TODO handle
+                    db.get({app_state: APP_DATA + data.app_name, user_sessions: USER_SESSIONS},
+                        function(result){
+                            let app_state = result.app_state;
+                            let user_sessions = result.user_sessions;
+                            let user_key = null;
+                            if(!(data.session_cookie in user_sessions) || user_sessions[data.session_cookie] == ""){
+                                user_key = data.session_cookie; }
+                            else{
+                                user_key = user_sessions[data.session_cookie]; }
+                            app_state = Apps[data.app_name](args, puts,
+                                {app_state: result.app_state,
+                                 passwords: data.passwords,
+                                 user_key: user_key});
+                            // console.log('app_state', app_state);
+                            db.set(APP_DATA + data.app_name, app_state); })
                 }
             }
             else if(cmd in Commands){

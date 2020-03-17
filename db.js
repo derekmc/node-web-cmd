@@ -84,7 +84,7 @@ exports.set = function(key, value, next){
                     throw new Error("db.js: destructursing 'set' call requires value key for key key '" + k + "'"); }
                 let _k = key[k];
                 let _v = value[k];
-                if(v === undefined){
+                if(_v === undefined){
                     delete __data[_k]; }
                 else{
                     __data[_k] = _v; }

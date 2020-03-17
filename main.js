@@ -20,13 +20,13 @@ const APP_DATA = "app_data|";
 // map of session_cookie to user_ids.  Guest sessions have empty string id: "".
 // if it's a guest session, store the app user_data by session_cookie, and not user_id.
 const USER_SESSIONS = "user_sessions";
-const USER_INFOS = "user_infos"; // map of user_ids, to salt, password_hash, etc.
+const USER_INFO = "user_info"; // map of user_ids, to salt, password_hash, etc.
 const SESSION_COOKIE_LEN = 20;
 const USER_ID_LEN = 10;
 const SESSION_COOKIE_NAME = "SESSION_COOKIE";
 
 db.load(DB_FILE, function(){
-   console.log('database loaded: ' + DB_FILE); });
+   if(VERBOSE) console.log('database loaded: ' + DB_FILE); });
 
 setInterval(()=>db.save(DB_FILE, ()=>{if(VERBOSE) console.log('database saved: ' + DB_FILE)}), SAVE_INTERVAL);
 
@@ -110,7 +110,7 @@ function loadUserApp(appname, filename){
 //    // dataapp(db, args, puts)
 //}
 loadUserApp('guess', './app/guess.js');
-console.log('apps', Apps)
+// console.log('apps', Apps)
 
 Aliases.dark = 'config bg 000 fg fff';
 Aliases.light = 'config bg fff fg 000';
@@ -302,7 +302,8 @@ let server = http.createServer(function(request, response){
         if(data.session_cookie == ""){
             data.session_cookie = randstr(ALPHANUMS, SESSION_COOKIE_LEN);
             if(result.user_sessions == undefined){
-                result.user_sessions = {data.session_cookie : ""}; }
+                result.user_sessions = {};
+                result.user_sessions[data.session_cookie] =  ""; }
             db.set({user_sessions:USER_SESSIONS}, result); 
             headers['Set-Cookie'] = SESSION_COOKIE_NAME + "=" + data.session_cookie + ";";
         }
@@ -423,21 +424,26 @@ let server = http.createServer(function(request, response){
                     // TODO handle data_context config parameter.
                     // TODO handle app_context.
                     // TODO handle
-                    db.get({app_state: APP_DATA + data.app_name, user_sessions: USER_SESSIONS},
+                    let keys = { app_state: APP_DATA + data.app_name,
+                                 user_sessions: USER_SESSIONS };
+                    db.get(keys,
                         function(result){
                             let app_state = result.app_state;
                             let user_sessions = result.user_sessions;
+                            if(user_sessions == undefined){
+                                user_sessions = result.user_sessions = {}; }
                             let user_key = null;
                             if(!(data.session_cookie in user_sessions) || user_sessions[data.session_cookie] == ""){
-                                user_key = data.session_cookie; }
+                                user_key = data.session_cookie;
+                                user_sessions[user_key] = ""; }
                             else{
                                 user_key = user_sessions[data.session_cookie]; }
-                            app_state = Apps[data.app_name](args, puts,
+                            result.app_state = Apps[data.app_name](args, puts,
                                 {app_state: result.app_state,
                                  passwords: data.passwords,
                                  user_key: user_key});
-                            // console.log('app_state', app_state);
-                            db.set(APP_DATA + data.app_name, app_state); })
+                            console.log('app_state', result.app_state);
+                            db.set(keys, result); })
                 }
             }
             else if(cmd in Commands){

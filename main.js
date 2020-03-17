@@ -21,6 +21,7 @@ const APP_DATA = "app_data|";
 // if it's a guest session, store the app user_data by session_cookie, and not user_id.
 const USER_SESSIONS = "user_sessions";
 const USER_INFO = "user_info"; // map of user_ids, to salt, password_hash, etc.
+const USER_CONFIGS = "user_configs";
 const SESSION_COOKIE_LEN = 20;
 const USER_ID_LEN = 10;
 const SESSION_COOKIE_NAME = "SESSION_COOKIE";
@@ -168,11 +169,11 @@ HelpMessages.config =
   " Type 'config' with no arguments to see current config.\n";
 
 // Commands modify state in place, apps do not.
-Commands.config = function(args, puts, state){
+Commands.config = function(args, puts, data){
     if(args.length == 1){
         let index = 0;
-        for(var k in state.config){
-            puts(k + " " + state.config[k]); }
+        for(var k in data.config){
+            puts(k + " " + data.config[k]); }
         return; }
     let config_str = args.slice(1).join(" ");
     if(!alphanum_regex.test(config_str)){
@@ -186,7 +187,7 @@ Commands.config = function(args, puts, state){
             filtered[k] = new_config[k]; }
         else{
             puts("Invalid config property '" + k + "'"); }}
-    state.config = mergeMap(state.config, filtered);
+    data.config = mergeMap(data.config, filtered);
     puts("config changes:");
     for(let k in filtered){
         puts(" " + k + " " + filtered[k]); }
@@ -261,7 +262,6 @@ function dumpHist(hist){
     let result_array = [];
     if(!hist) return "";
     for(let i=0; i<hist.length; ++i){
-        // console.log('hist[i]', hist[i]);
         result_array.push(hist[i].map(function(s){ return s.trim()}).join("\n"));
     }
     return result_array.join(NEW_CONTEXT) + "\n";
@@ -281,7 +281,6 @@ let server = http.createServer(function(request, response){
     let headers = {"Content-Type": "text/html"};
 
     
-    // console.log('headers', request.headers);
     if(request.headers.hasOwnProperty('cookie')){
         let cookies = request.headers['cookie']
         let parts = cookies.split(/\;\s*/g);
@@ -291,14 +290,17 @@ let server = http.createServer(function(request, response){
             if(index > 0){
                 let key = part.substr(0, index).trim();
                 let value = part.substr(index+1).trim();
-                //console.log('key value', key, value);
                 if(key == SESSION_COOKIE_NAME){
                    if(alphanum_regex.test(value)){
                       data.session_cookie = value; }}
             }
         }
     }
-    db.get({user_sessions: USER_SESSIONS}, function(result){
+    let keys = { user_configs: USER_CONFIGS,
+                 user_sessions: USER_SESSIONS };
+    db.get(keys, function(result){
+        let user_configs = result.user_configs;
+        let user_sessions = result.user_sessions;
         if(data.session_cookie == ""){
             data.session_cookie = randstr(ALPHANUMS, SESSION_COOKIE_LEN);
             if(result.user_sessions == undefined){
@@ -307,186 +309,197 @@ let server = http.createServer(function(request, response){
             db.set({user_sessions:USER_SESSIONS}, result); 
             headers['Set-Cookie'] = SESSION_COOKIE_NAME + "=" + data.session_cookie + ";";
         }
-    });
+
+        // console.log('got user_configs', user_configs);
+        if(user_sessions == undefined){
+            user_sessions = result.user_sessions = {}; }
+        if(user_configs == undefined){
+            user_configs = result.user_configs = {}; }
+
+        // session_cookie is user_key if user is not logged in.
+        let user_key = null;
+        if(!(data.session_cookie in user_sessions) || user_sessions[data.session_cookie] == ""){
+            user_key = data.session_cookie;
+            user_sessions[user_key] = ""; }
+        else{
+            user_key = user_sessions[data.session_cookie]; }
+
+        //console.log('user_configs', user_configs);
+        if(user_key in user_configs){
+            data.config = parseConfig(user_configs[user_key]); }
+            //console.log('loaded user config', data.config); }
+        else{
+            user_configs[user_key] = dumpConfig(data.config); }
 
 
+        if(request.method == "GET"){
+            response.writeHead(200, headers);
+            cmdPage(data);
+        }
+        if(request.method == "POST"){
+            let requestBody = '';
+            request.on('data', function(_data){
+                requestBody += _data;
+                if(requestBody.length > 1e7) {
+                    response.writeHead(413, 'Request Entity Too Large', {'Content-Type': 'text/html'});
+                    response.end('<!doctype html><html><head><title>413</title></head><body>413: Request Entity Too Large</body></html>');
+                }
+            });
+            request.on('end', function(){
+                try{
+                    let formData = qs.parse(requestBody);
 
-    if(request.method == "GET"){
-        response.writeHead(200, headers);
-        cmdPage(data);
-    }
-    if(request.method == "POST"){
-        let requestBody = '';
-        request.on('data', function(_data){
-            requestBody += _data;
-            if(requestBody.length > 1e7) {
-                response.writeHead(413, 'Request Entity Too Large', {'Content-Type': 'text/html'});
-                response.end('<!doctype html><html><head><title>413</title></head><body>413: Request Entity Too Large</body></html>');
-            }
-        });
-        request.on('end', function(){
-            try{
-                let formData = qs.parse(requestBody);
-                // console.log('secret_input', formData.secret_input);
+                    // santize all form fields for html characters.
+                    for(let k in formData){
+                        formData[k] = escapeHtml(formData[k]); }
 
-                // santize all form fields for html characters.
-                for(let k in formData){
-                    formData[k] = escapeHtml(formData[k]); }
+                    let cmd_text = "";
+                    // handle form data to modify local variables and 
+                    data.passwords = [];
+                    for(var i=1; true; ++i){
+                        let field_name = PASSWORD_FIELD_PREFIX + i;
+                        if(!formData[field_name]){
+                            break; }
+                        data.passwords.push(formData[field_name]);
+                    }
+                    // console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
+                    // session token must match the allowed characters, but could otherwise be forged.
+                    if(formData.config){
+                        //let post_config = parseConfig(formData.config);
+                        //data.config = mergeMap(data.config, post_config);
+                    }
+                    if(formData.cmd_out){
+                        data.cmd_out = formData.cmd_out;
+                    }
+                    if(formData.base_cmd_out){
+                        data.base_cmd_out = formData.base_cmd_out;
+                    }
+                    if(formData.cmd_hist){
+                        data.cmd_hist = parseHist(formData.cmd_hist);
+                    }
+                    // TODO do we want an app stack?
+                    // when an app in the app stack returns,
+                    // the child app_name and child app_state
+                    // are passed as extra parameters to the app.
+                    if(formData.app_name){
+                        data.app_name = formData.app_name;
+                    }
+                    if(formData.cmd_text){
+                        data.cmd_text = formData.cmd_text;
+                        if(data.cmd_text.length){
+                            if(!data.cmd_hist){
+                                data.cmd_hist = [[]]; }
+                            if(!data.cmd_hist.length){
+                                data.cmd_hist.push([]); }
+                            let last_hist_item = lastHistItem(data.cmd_hist);
+                            if(data.cmd_text != last_hist_item){
+                                data.cmd_hist[data.cmd_hist.length - 1].push(data.cmd_text); }
+                        }
+                    }
 
-                let cmd_text = "";
-                // handle form data to modify local variables and 
-                data.passwords = [];
-                for(var i=1; true; ++i){
-                    let field_name = PASSWORD_FIELD_PREFIX + i;
-                    if(!formData[field_name]){
-                        break; }
-                    data.passwords.push(formData[field_name]);
+                    let puts = function(s){ data.cmd_out += "\n" + s; }
+                    handleCommand(data, data.cmd_text, puts);
+                    cmdPage(data);
                 }
-                // console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
-                // session token must match the allowed characters, but could otherwise be forged.
-                if(formData.config){
-                    let post_config = parseConfig(formData.config);
-                    data.config = mergeMap(data.config, post_config);
+                catch(error){
+                    console.error('Error handling request.', error);
+                    response.writeHead(500, {"Content-Type": "text/html"});
+                    let html = "<h1>Unhandled error.</h1>";
+                    response.end(html);
                 }
-                if(formData.cmd_out){
-                    data.cmd_out = formData.cmd_out;
-                }
-                if(formData.base_cmd_out){
-                    data.base_cmd_out = formData.base_cmd_out;
-                }
-                if(formData.cmd_hist){
-                    data.cmd_hist = parseHist(formData.cmd_hist);
-                }
-                // TODO do we want an app stack?
-                // when an app in the app stack returns,
-                // the child app_name and child app_state
-                // are passed as extra parameters to the app.
-                if(formData.app_name){
-                    data.app_name = formData.app_name;
-                }
-                if(formData.cmd_text){
-                    data.cmd_text = formData.cmd_text;
-                    if(data.cmd_text.length){
-                        if(!data.cmd_hist){
-                            data.cmd_hist = [[]]; }
-                        if(!data.cmd_hist.length){
-                            data.cmd_hist.push([]); }
-                        let last_hist_item = lastHistItem(data.cmd_hist);
-                        if(data.cmd_text != last_hist_item){
-                            data.cmd_hist[data.cmd_hist.length - 1].push(data.cmd_text); }
+            });
+        }
+        function handleCommand(data, cmd_text, puts){
+            if(!cmd_text) cmd_text = "";
+            puts("> " + cmd_text);
+            // aliases require full match
+            if(cmd_text in Aliases){
+                cmd_text = Aliases[cmd_text]; }
+            let args = cmd_text.split(/\s+/);
+            if(!args.length) return;
+            let cmd = args[0];
+
+            // clear command works in any context.
+            if(cmd == 'clear'){
+                data.cmd_out = ""; }
+            else{
+                if(data.app_name == "" && (cmd in Apps)){
+                    data.base_cmd_out = data.cmd_out;
+                    data.cmd_out = `'${cmd}' started. Type 'exit' to exit.\n`;
+                    data.app_name = cmd;
+                    data.cmd_hist.push([]); // add a new layer of history.
+                    // when entering app, remove appname from args
+                    args = args.slice(1);
+                    data.app_state; }
+                if(data.app_name.length){
+                    if(cmd == "exit"){
+                        data.cmd_out = data.base_cmd_out;
+                        data.cmd_out += "\n'" + data.app_name + "' terminated.";
+                        data.base_cmd_out = "";
+                        data.app_state = "";
+                        // console.log('cmd_hist', data.cmd_hist);
+                        data.cmd_hist.pop(); // remove a layer of history.
+                        data.app_name = ""; }
+                    else{
+                        // TODO handle data_context config parameter.
+                        // TODO handle app_context.
+                        // TODO handle
+                        let app_data_key = APP_DATA + data.app_name;
+                        db.get(app_data_key,
+                            function(app_state){
+                                keys.app_state = app_data_key;
+                                result.app_state = Apps[data.app_name](args, puts,
+                                    {app_state: result.app_state,
+                                     passwords: data.passwords,
+                                     user_key: user_key});
+                                db.set(keys, result); })
                     }
                 }
-
-                let puts = function(s){ data.cmd_out += "\n" + s; }
-                handleCommand(data, data.cmd_text, puts);
-                cmdPage(data);
-            }
-            catch(error){
-                console.error('Error handling request.', error);
-                response.writeHead(500, {"Content-Type": "text/html"});
-                let html = "<h1>Unhandled error.</h1>";
-                response.end(html);
-            }
-        });
-    }
-    function handleCommand(data, cmd_text, puts){
-        if(!cmd_text) cmd_text = "";
-        puts("> " + cmd_text);
-        // aliases require full match
-        if(cmd_text in Aliases){
-            cmd_text = Aliases[cmd_text]; }
-        let args = cmd_text.split(/\s+/);
-        if(!args.length) return;
-        let cmd = args[0];
-
-        // clear command works in any context.
-        if(cmd == 'clear'){
-            data.cmd_out = ""; }
-        else{
-            if(data.app_name == "" && (cmd in Apps)){
-                data.base_cmd_out = data.cmd_out;
-                data.cmd_out = `'${cmd}' started. Type 'exit' to exit.\n`;
-                data.app_name = cmd;
-                data.cmd_hist.push([]); // add a new layer of history.
-                // when entering app, remove appname from args
-                args = args.slice(1);
-                data.app_state; }
-            if(data.app_name.length){
-                if(cmd == "exit"){
-                    data.cmd_out = data.base_cmd_out;
-                    data.cmd_out += "\n'" + data.app_name + "' terminated.";
-                    data.base_cmd_out = "";
-                    data.app_state = "";
-                    // console.log('cmd_hist', data.cmd_hist);
-                    data.cmd_hist.pop(); // remove a layer of history.
-                    data.app_name = ""; }
+                else if(cmd in Commands){
+                    // data.app_name = "test app_name";
+                    Commands[cmd](args, _puts, data);
+                    result.user_configs[user_key] = dumpConfig(data.config);
+                    console.log('setting', keys, result);
+                    db.set(keys, result); }
                 else{
-                    // TODO handle data_context config parameter.
-                    // TODO handle app_context.
-                    // TODO handle
-                    let keys = { app_state: APP_DATA + data.app_name,
-                                 user_sessions: USER_SESSIONS };
-                    db.get(keys,
-                        function(result){
-                            let app_state = result.app_state;
-                            let user_sessions = result.user_sessions;
-                            if(user_sessions == undefined){
-                                user_sessions = result.user_sessions = {}; }
-                            let user_key = null;
-                            if(!(data.session_cookie in user_sessions) || user_sessions[data.session_cookie] == ""){
-                                user_key = data.session_cookie;
-                                user_sessions[user_key] = ""; }
-                            else{
-                                user_key = user_sessions[data.session_cookie]; }
-                            result.app_state = Apps[data.app_name](args, puts,
-                                {app_state: result.app_state,
-                                 passwords: data.passwords,
-                                 user_key: user_key});
-                            console.log('app_state', result.app_state);
-                            db.set(keys, result); })
-                }
+                    puts(" Unknown command: '" + cmd + "'"); }}
+            // wrap puts to start all lines with a space.
+            function _puts(s){ puts(' ' + s); }
+        }
+        // closure for rendering the page.
+        function cmdPage(data){
+            let template_data = {};
+
+            template_data.title = data.title;
+
+            let cmd_list = [];
+            cmd_list = cmd_list.concat(getKeys(Commands));
+            cmd_list = cmd_list.concat(getKeys(Aliases));
+            cmd_list = cmd_list.concat(getKeys(Apps));
+            template_data.cmd_list = cmd_list.join(' ');
+            let cmd_out_lines = data.cmd_out.split("\n");
+            if(cmd_out_lines.length >= data.config.rows){
+                cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - data.config.rows + 1);
             }
-            else if(cmd in Commands){
-                // data.app_name = "test app_name";
-                Commands[cmd](args, _puts, data); }
-            else{
-                puts(" Unknown command: '" + cmd + "'"); }}
-        // wrap puts to start all lines with a space.
-        function _puts(s){ puts(' ' + s); }
-    }
-    // closure for rendering the page.
-    function cmdPage(data){
-        let template_data = {};
+            template_data.cmd_out = cmd_out_lines.join("\n");
+            template_data.base_cmd_out = data.base_cmd_out;
+            // console.log('cmd_hist', data.cmd_hist);
+            template_data.cmd_hist = dumpHist(data.cmd_hist);
+            template_data.config = dumpConfig(data.config);
+            template_data.app_name = data.app_name;
+            template_data.app_state = data.app_state;
+            template_data.session_cookie = data.session_cookie;
 
-        template_data.title = data.title;
+            // add config vars to rendering data context.
+            for(let key in data.config){
+                template_data[key] = data.config[key];
+            }
 
-        let cmd_list = [];
-        cmd_list = cmd_list.concat(getKeys(Commands));
-        cmd_list = cmd_list.concat(getKeys(Aliases));
-        cmd_list = cmd_list.concat(getKeys(Apps));
-        template_data.cmd_list = cmd_list.join(' ');
-        let cmd_out_lines = data.cmd_out.split("\n");
-        if(cmd_out_lines.length >= data.config.rows){
-            cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - data.config.rows + 1);
+            response.writeHead(200, headers);
+            let html = cmd_page(template_data);
+            response.end(html);
         }
-        template_data.cmd_out = cmd_out_lines.join("\n");
-        template_data.base_cmd_out = data.base_cmd_out;
-        // console.log('cmd_hist', data.cmd_hist);
-        template_data.cmd_hist = dumpHist(data.cmd_hist);
-        template_data.config = dumpConfig(data.config);
-        template_data.app_name = data.app_name;
-        template_data.app_state = data.app_state;
-        template_data.session_cookie = data.session_cookie;
-
-        // add config vars to rendering data context.
-        for(let key in data.config){
-            template_data[key] = data.config[key];
-        }
-
-        response.writeHead(200, headers);
-        let html = cmd_page(template_data);
-        response.end(html);
-    }
+    })
 })
 
 server.listen(PORT);

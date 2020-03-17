@@ -1,4 +1,4 @@
-security concerns. -- 20.03.17 14:14
+list potential security concerns csrf, etc. -- 20.03.17 14:14
 make a command that uses a database. -- 20.02.17 22:23
 send command list to client, for features like tab completion -- 20.02.15 08:30
 all password commands have a * prefix -- 20.02.13 05:16

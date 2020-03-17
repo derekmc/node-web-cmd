@@ -310,7 +310,6 @@ let server = http.createServer(function(request, response){
             headers['Set-Cookie'] = SESSION_COOKIE_NAME + "=" + data.session_cookie + ";";
         }
 
-        // console.log('got user_configs', user_configs);
         if(user_sessions == undefined){
             user_sessions = result.user_sessions = {}; }
         if(user_configs == undefined){
@@ -324,10 +323,8 @@ let server = http.createServer(function(request, response){
         else{
             user_key = user_sessions[data.session_cookie]; }
 
-        //console.log('user_configs', user_configs);
         if(user_key in user_configs){
             data.config = parseConfig(user_configs[user_key]); }
-            //console.log('loaded user config', data.config); }
         else{
             user_configs[user_key] = dumpConfig(data.config); }
 
@@ -449,7 +446,7 @@ let server = http.createServer(function(request, response){
                             function(app_state){
                                 keys.app_state = app_data_key;
                                 result.app_state = Apps[data.app_name](args, puts,
-                                    {app_state: result.app_state,
+                                    {app_state: app_state,
                                      passwords: data.passwords,
                                      user_key: user_key});
                                 db.set(keys, result); })
@@ -459,7 +456,6 @@ let server = http.createServer(function(request, response){
                     // data.app_name = "test app_name";
                     Commands[cmd](args, _puts, data);
                     result.user_configs[user_key] = dumpConfig(data.config);
-                    console.log('setting', keys, result);
                     db.set(keys, result); }
                 else{
                     puts(" Unknown command: '" + cmd + "'"); }}

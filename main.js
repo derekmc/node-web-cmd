@@ -26,6 +26,10 @@ const SESSION_COOKIE_LEN = 20;
 const USER_ID_LEN = 10;
 const SESSION_COOKIE_NAME = "SESSION_COOKIE";
 
+loadUserApp('guess', './app/guess.js');
+loadCmd('config', './cmd/config.js');
+let {parseConfig, dumpConfig, DEFAULT_CONFIG} = require('./cmd/config.js');
+
 db.load(DB_FILE, function(){
    if(VERBOSE) console.log('database loaded: ' + DB_FILE); });
 
@@ -38,7 +42,6 @@ const alphanum_regex = /^[A-Za-z0-9 ]*$/;
 // config is a whitespace separated list of tuples
 // TODO allow setting the data context with config: 'browser', 'cookie', 'user', or 'session'
 // apps that aren't data apps simply use the configured data context.
-const DEFAULT_CONFIG = "rows 19 cols 54 fg 000 bg fff";
 const DEFAULT_HIST = "help";
 const DEFAULT_CMDOUT = "Type 'help' for help.";
 const ALPHANUMS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -66,15 +69,17 @@ function escapeHtml(unsafe) {
 // Commands are just apps that operate on the global state context,
 // and not a localized state.
 
-// TODO loadCommand and loadApp functions load apps or commands from a file and set their help messages.
+// TODO loadCmd and loadApp functions load apps or commands from a file and set their help messages.
 // TODO a DataApp uses database callbacks like revision-db.
-function loadCmd(filename, cmdname){
-    // cmd(state, args, puts)
+function loadCmd(cmdname, filename){
+    let cmd_module = require(filename);
+    HelpMessages[cmdname] = cmd_module.help;
+    Commands[cmdname] = cmd_module.command;
 }
 // TODO normal apps need to be wrapped special to use the
 // callback convention.
 function loadApp(appname, filename){
-    app = require(filename);
+    let app = require(filename);
     // app(state, args, puts, child_name, child_state) TODO
     Apps[appname] = app;
 }
@@ -110,7 +115,6 @@ function loadUserApp(appname, filename){
 //    }
 //    // dataapp(db, args, puts)
 //}
-loadUserApp('guess', './app/guess.js');
 // console.log('apps', Apps)
 
 Aliases.dark = 'config bg 000 fg fff';
@@ -162,37 +166,6 @@ Commands.help = function(args, puts, state){
 }
 
 
-
-HelpMessages.config =
-  "Edit config.\n" + 
-  " Example: \"config rows 25 cols 65\"\n" +
-  " Type 'config' with no arguments to see current config.\n";
-
-// Commands modify state in place, apps do not.
-Commands.config = function(args, puts, data){
-    if(args.length == 1){
-        let index = 0;
-        for(var k in data.config){
-            puts(k + " " + data.config[k]); }
-        return; }
-    let config_str = args.slice(1).join(" ");
-    if(!alphanum_regex.test(config_str)){
-        puts("'config' only allows alphanumeric values.");
-        return; }
-    let new_config = parseConfig(config_str);
-    let config_props = parseConfig(DEFAULT_CONFIG);
-    let filtered = {};
-    for(let k in new_config){
-        if(k in config_props){
-            filtered[k] = new_config[k]; }
-        else{
-            puts("Invalid config property '" + k + "'"); }}
-    data.config = mergeMap(data.config, filtered);
-    puts("config changes:");
-    for(let k in filtered){
-        puts(" " + k + " " + filtered[k]); }
-}
-
 // second map overwrites first.
 function getKeys(obj){
     let keys = [];
@@ -200,44 +173,6 @@ function getKeys(obj){
         keys.push(k); }
     return keys;
 }
-function mergeIntoMap(result, a){
-    for(let k in a){
-        result[k] = a[k]; }
-    return result;
-}
-function mergeMap(a, b){
-    let result = {};
-    for(let k in a){
-        result[k] = a[k]; }
-    for(let k in b){
-        result[k] = b[k]; }
-    return result;
-}
-
-// config is a whitespace separated list of tuples
-// "property1 value1 property2 value2"
-function parseConfig(config_str){
-    let array = config_str.split(/\s+/);
-    let result = {};
-    for(let i=0; i<array.length - 1; i += 2){
-        let key = array[i];
-        let value = array[i + 1];
-        result[key] = value;
-    }
-    return result;
-}
-
-
-function dumpConfig(config){
-    let result_array = [];
-    for(let k in config){
-        let value = config[k];
-        result_array.push(k);
-        result_array.push(value);
-    }
-    return result_array.join(' ');
-}
-
 function parseHist(hist_str){
     let ctx_array = hist_str.trim().split(NEW_CONTEXT);
     let result = [];
@@ -361,10 +296,6 @@ let server = http.createServer(function(request, response){
                     }
                     // console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
                     // session token must match the allowed characters, but could otherwise be forged.
-                    if(formData.config){
-                        //let post_config = parseConfig(formData.config);
-                        //data.config = mergeMap(data.config, post_config);
-                    }
                     if(formData.cmd_out){
                         data.cmd_out = formData.cmd_out;
                     }

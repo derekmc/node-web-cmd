@@ -50,6 +50,7 @@
         </span>
       </span>
     </form>
+    <a href="https://github.com/derekmc/node-web-cmd/">Github</a>
     <script>
       var cmd_list = "<%= cmd_list %>".split(' ');
       var hist_rows = [];
@@ -143,7 +144,6 @@
                   old_button.id = PASSWORD_REMOVE_PREFIX + i;
                   old_button.setAttribute("onClick", "removePassword(event, " + i + ")"); }
           }
-
           return false;
       }
       window.addEventListener("load", init);

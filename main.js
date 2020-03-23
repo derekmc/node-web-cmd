@@ -12,6 +12,11 @@ let PORT = 8000;
 if(process.argv.length >= 3){
     PORT = process.argv[2]; }
 
+function Default(value, _default){
+    if(value === null || value === undefined) return _default;
+    return value;
+}
+
 const DB_FILE = "webapp_data.json";
 const SAVE_INTERVAL = 10*1000;
 const VERBOSE = false;
@@ -20,11 +25,12 @@ const APP_DATA = "app_data|";
 // map of session_cookie to user_ids.  Guest sessions have empty string id: "".
 // if it's a guest session, store the app user_data by session_cookie, and not user_id.
 const USER_SESSIONS = "user_sessions";
-const USER_INFO = "user_info"; // map of user_ids, to salt, password_hash, etc.
+const USER_INFOS = "user_infos"; // map of user_ids, to salt, password_hash, etc.
 const USER_CONFIGS = "user_configs";
 const SESSION_COOKIE_LEN = 20;
 const USER_ID_LEN = 10;
 const SESSION_COOKIE_NAME = "SESSION_COOKIE";
+const PASSWORD_MINLENGTH = 6;
 
 loadUserApp('guess', './app/guess.js');
 loadCmd('config', './cmd/config.js');
@@ -127,7 +133,27 @@ Aliases.tall = 'config rows 33 cols 54';
 
 HelpMessages.help = "Show help for a command. Example: \"help config\".";
 
-Commands.help = function(args, puts, state){
+Commands.newuser = function(args, puts, data){
+    let passwords = data.passwords;
+    let user_info = data.user_info;
+
+    if(passwords.length != 2){
+        puts("Error: newuser requires 2 passwords: password and confirm.");
+        return; }
+    if(passwords[0] != passwords[1]){
+        puts("Error: password mismatch.");
+        return; }
+    if(passwords[0].length < PASSWORD_MINLENGTH){
+        puts("Error: password too short.");
+        break;
+    }
+    // to make a new user, add the username and password salt to the table user_infos
+
+}
+Commands.useraccount = function(args, puts, data){
+
+}
+Commands.help = function(args, puts, data){
     if(args.length == 1){
         let cmdlist = [];
         let applist = getKeys(Apps);
@@ -203,7 +229,7 @@ function dumpHist(hist){
 }
 
 let server = http.createServer(function(request, response){
-    let data  = {
+    let page_data = {
         "title": "cmd",
         "config" : parseConfig(DEFAULT_CONFIG),
         "cmd_out" : DEFAULT_CMDOUT,
@@ -227,46 +253,50 @@ let server = http.createServer(function(request, response){
                 let value = part.substr(index+1).trim();
                 if(key == SESSION_COOKIE_NAME){
                    if(alphanum_regex.test(value)){
-                      data.session_cookie = value; }}
+                      page_data.session_cookie = value; }}
             }
         }
     }
-    let keys = { user_configs: USER_CONFIGS,
-                 user_sessions: USER_SESSIONS };
-    db.get(keys, function(result){
-        let user_configs = result.user_configs;
-        let user_sessions = result.user_sessions;
-        if(data.session_cookie == ""){
-            data.session_cookie = randstr(ALPHANUMS, SESSION_COOKIE_LEN);
-            if(result.user_sessions == undefined){
-                result.user_sessions = {};
-                result.user_sessions[data.session_cookie] =  ""; }
-            db.set({user_sessions:USER_SESSIONS}, result); 
-            headers['Set-Cookie'] = SESSION_COOKIE_NAME + "=" + data.session_cookie + ";";
-        }
+    // cmd_keys = ;
+    let cmd_keys = { user_configs: USER_CONFIGS,
+                     user_sessions: USER_SESSIONS,
+                     user_infos: USER_INFOS };
+    db.get(cmd_keys, function(server_data){
+        server_data.user_sessions = Default(server_data.user_sessions, {});
+        server_data.user_configs = Default(server_data.user_configs, {});
+        server_data.user_infos = Default(server_data.user_infos, {});
 
-        if(user_sessions == undefined){
-            user_sessions = result.user_sessions = {}; }
-        if(user_configs == undefined){
-            user_configs = result.user_configs = {}; }
+        if(page_data.session_cookie == ""){
+            page_data.session_cookie = randstr(ALPHANUMS, SESSION_COOKIE_LEN);
+            if(server_data.user_sessions == undefined){
+                server_data.user_sessions = {};
+                server_data.user_sessions[page_data.session_cookie] =  ""; }
+            db.set({user_sessions:USER_SESSIONS}, server_data); 
+            headers['Set-Cookie'] = SESSION_COOKIE_NAME + "=" + page_data.session_cookie + ";";
+        }
 
         // session_cookie is user_key if user is not logged in.
         let user_key = null;
-        if(!(data.session_cookie in user_sessions) || user_sessions[data.session_cookie] == ""){
-            user_key = data.session_cookie;
-            user_sessions[user_key] = ""; }
+        if(!(page_data.session_cookie in server_data.user_sessions) || server_data.user_sessions[page_data.session_cookie] == ""){
+            user_key = page_data.session_cookie;
+            server_data.user_sessions[user_key] = ""; }
         else{
-            user_key = user_sessions[data.session_cookie]; }
+            user_key = server_data.user_sessions[page_data.session_cookie]; }
 
-        if(user_key in user_configs){
-            data.config = parseConfig(user_configs[user_key]); }
+        let cmd_data = { user_info: Default(server_data.user_infos[user_key], {}),
+                         user_config: Default(server_data.user_configs[user_key], {}) }
+
+        if(user_key in server_data.user_configs && server_data.user_configs[user_key].length){
+            let server_config = parseConfig(server_data.user_configs[user_key]);
+            for(let k in server_config){
+                page_data.config[k] = server_config[k]; }
+            console.log('page_data.config', page_data.config); }
         else{
-            user_configs[user_key] = dumpConfig(data.config); }
-
+            server_data.user_configs[user_key] = dumpConfig(page_data.config); }
 
         if(request.method == "GET"){
             response.writeHead(200, headers);
-            cmdPage(data);
+            cmdPage(page_data);
         }
         if(request.method == "POST"){
             let requestBody = '';
@@ -287,47 +317,47 @@ let server = http.createServer(function(request, response){
 
                     let cmd_text = "";
                     // handle form data to modify local variables and 
-                    data.passwords = [];
+                    page_data.passwords = [];
                     for(var i=1; true; ++i){
                         let field_name = PASSWORD_FIELD_PREFIX + i;
                         if(!formData[field_name]){
                             break; }
-                        data.passwords.push(formData[field_name]);
+                        page_data.passwords.push(formData[field_name]);
                     }
-                    // console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
+                    // console.log('remove this debugging only!!! Passwords: ' + page_data.passwords.join(', '));
                     // session token must match the allowed characters, but could otherwise be forged.
                     if(formData.cmd_out){
-                        data.cmd_out = formData.cmd_out;
+                        page_data.cmd_out = formData.cmd_out;
                     }
                     if(formData.base_cmd_out){
-                        data.base_cmd_out = formData.base_cmd_out;
+                        page_data.base_cmd_out = formData.base_cmd_out;
                     }
                     if(formData.cmd_hist){
-                        data.cmd_hist = parseHist(formData.cmd_hist);
+                        page_data.cmd_hist = parseHist(formData.cmd_hist);
                     }
                     // TODO do we want an app stack?
                     // when an app in the app stack returns,
                     // the child app_name and child app_state
                     // are passed as extra parameters to the app.
                     if(formData.app_name){
-                        data.app_name = formData.app_name;
+                        page_data.app_name = formData.app_name;
                     }
                     if(formData.cmd_text){
-                        data.cmd_text = formData.cmd_text;
-                        if(data.cmd_text.length){
-                            if(!data.cmd_hist){
-                                data.cmd_hist = [[]]; }
-                            if(!data.cmd_hist.length){
-                                data.cmd_hist.push([]); }
-                            let last_hist_item = lastHistItem(data.cmd_hist);
-                            if(data.cmd_text != last_hist_item){
-                                data.cmd_hist[data.cmd_hist.length - 1].push(data.cmd_text); }
+                        page_data.cmd_text = formData.cmd_text;
+                        if(page_data.cmd_text.length){
+                            if(!page_data.cmd_hist){
+                                page_data.cmd_hist = [[]]; }
+                            if(!page_data.cmd_hist.length){
+                                page_data.cmd_hist.push([]); }
+                            let last_hist_item = lastHistItem(page_data.cmd_hist);
+                            if(page_data.cmd_text != last_hist_item){
+                                page_data.cmd_hist[page_data.cmd_hist.length - 1].push(page_data.cmd_text); }
                         }
                     }
 
-                    let puts = function(s){ data.cmd_out += "\n" + s; }
-                    handleCommand(data, data.cmd_text, puts);
-                    cmdPage(data);
+                    let puts = function(s){ page_data.cmd_out += "\n" + s; }
+                    handleCommand(page_data.cmd_text, puts, page_data);
+                    cmdPage(page_data);
                 }
                 catch(error){
                     console.error('Error handling request.', error);
@@ -337,7 +367,7 @@ let server = http.createServer(function(request, response){
                 }
             });
         }
-        function handleCommand(data, cmd_text, puts){
+        function handleCommand(cmd_text, puts, page_data){
             if(!cmd_text) cmd_text = "";
             puts("> " + cmd_text);
             // aliases require full match
@@ -349,79 +379,84 @@ let server = http.createServer(function(request, response){
 
             // clear command works in any context.
             if(cmd == 'clear'){
-                data.cmd_out = ""; }
+                page_data.cmd_out = ""; }
             else{
-                if(data.app_name == "" && (cmd in Apps)){
-                    data.base_cmd_out = data.cmd_out;
-                    data.cmd_out = `'${cmd}' started. Type 'exit' to exit.\n`;
-                    data.app_name = cmd;
-                    data.cmd_hist.push([]); // add a new layer of history.
+                if(page_data.app_name == "" && (cmd in Apps)){
+                    page_data.base_cmd_out = page_data.cmd_out;
+                    page_data.cmd_out = `'${cmd}' started. Type 'exit' to exit.\n`;
+                    page_data.app_name = cmd;
+                    page_data.cmd_hist.push([]); // add a new layer of history.
                     // when entering app, remove appname from args
                     args = args.slice(1);
-                    data.app_state; }
-                if(data.app_name.length){
+                    page_data.app_state; }
+                if(page_data.app_name.length){
                     if(cmd == "exit"){
-                        data.cmd_out = data.base_cmd_out;
-                        data.cmd_out += "\n'" + data.app_name + "' terminated.";
-                        data.base_cmd_out = "";
-                        data.app_state = "";
-                        // console.log('cmd_hist', data.cmd_hist);
-                        data.cmd_hist.pop(); // remove a layer of history.
-                        data.app_name = ""; }
+                        page_data.cmd_out = page_data.base_cmd_out;
+                        page_data.cmd_out += "\n'" + page_data.app_name + "' terminated.";
+                        page_data.base_cmd_out = "";
+                        page_data.app_state = "";
+                        // console.log('cmd_hist', page_data.cmd_hist);
+                        page_data.cmd_hist.pop(); // remove a layer of history.
+                        page_data.app_name = ""; }
                     else{
                         // TODO handle data_context config parameter.
                         // TODO handle app_context.
                         // TODO handle
-                        let app_data_key = APP_DATA + data.app_name;
+                        let app_data_key = APP_DATA + page_data.app_name;
                         db.get(app_data_key,
                             function(app_state){
-                                keys.app_state = app_data_key;
-                                result.app_state = Apps[data.app_name](args, puts,
+                                cmd_keys.app_state = app_data_key;
+                                server_data.app_state = Apps[page_data.app_name](args, puts,
                                     {app_state: app_state,
-                                     passwords: data.passwords,
+                                     passwords: page_data.passwords,
                                      user_key: user_key});
-                                db.set(keys, result); })
+                                db.set(cmd_keys, server_data); })
                     }
                 }
                 else if(cmd in Commands){
-                    // data.app_name = "test app_name";
-                    Commands[cmd](args, _puts, data);
-                    result.user_configs[user_key] = dumpConfig(data.config);
-                    db.set(keys, result); }
+                    // page_data.app_name = "test app_name";
+                    Commands[cmd](args, _puts, cmd_data);
+                    for(var k in cmd_data.user_config){
+                        page_data.config[k] = cmd_data.user_config[k]; }
+                    console.log('page config, cmd config:', page_data.config, cmd_data.config);
+                    server_data.user_configs[user_key] = dumpConfig(page_data.config);
+                    server_data.user_infos[user_key] = server_data.user_info;
+                    db.set(cmd_keys, server_data); }
                 else{
                     puts(" Unknown command: '" + cmd + "'"); }}
             // wrap puts to start all lines with a space.
             function _puts(s){ puts(' ' + s); }
         }
         // closure for rendering the page.
-        function cmdPage(data){
+        function cmdPage(page_data){
             let template_data = {};
 
-            template_data.title = data.title;
+            template_data.title = page_data.title;
 
             let cmd_list = [];
             cmd_list = cmd_list.concat(getKeys(Commands));
             cmd_list = cmd_list.concat(getKeys(Aliases));
             cmd_list = cmd_list.concat(getKeys(Apps));
             template_data.cmd_list = cmd_list.join(' ');
-            let cmd_out_lines = data.cmd_out.split("\n");
-            if(cmd_out_lines.length >= data.config.rows){
-                cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - data.config.rows + 1);
+            let cmd_out_lines = page_data.cmd_out.split("\n");
+            if(cmd_out_lines.length >= page_data.config.rows){
+                cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - page_data.config.rows + 1);
             }
             template_data.cmd_out = cmd_out_lines.join("\n");
-            template_data.base_cmd_out = data.base_cmd_out;
+            template_data.base_cmd_out = page_data.base_cmd_out;
             // console.log('cmd_hist', data.cmd_hist);
-            template_data.cmd_hist = dumpHist(data.cmd_hist);
-            template_data.config = dumpConfig(data.config);
-            template_data.app_name = data.app_name;
-            template_data.app_state = data.app_state;
-            template_data.session_cookie = data.session_cookie;
+            template_data.cmd_hist = dumpHist(page_data.cmd_hist);
+            template_data.config = dumpConfig(page_data.config);
+            template_data.app_name = page_data.app_name;
+            template_data.app_state = page_data.app_state;
+            // template_data.session_cookie = page_data.session_cookie;
 
             // add config vars to rendering data context.
-            for(let key in data.config){
-                template_data[key] = data.config[key];
+            for(let key in page_data.config){
+                template_data[key] = page_data.config[key];
             }
 
+            console.log('template_data', template_data);
             response.writeHead(200, headers);
             let html = cmd_page(template_data);
             response.end(html);

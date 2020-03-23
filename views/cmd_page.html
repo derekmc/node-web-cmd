@@ -50,7 +50,7 @@
         </span>
       </span>
     </form>
-    <a href="https://github.com/derekmc/node-web-cmd/">Github</a>
+    <!-- a href="https://github.com/derekmc/node-web-cmd/">Github</a-->
     <script>
       var cmd_list = "<%= cmd_list %>".split(' ');
       var hist_rows = [];
@@ -118,9 +118,10 @@
       // if javascript is available, replace the two default password fields
       // with a button to add passwords.
       function initPasswordFields(){
-          document.getElementById('passwords_div').innerHTML = "";
-          document.body.innerHTML += 
-              '<button type="button" id="add_password_button" title="Add Password Input" onclick="addPassword(event);">Password</button>';
+          var passwords_div = document.getElementById('passwords_div');
+          passwords_div.innerHTML = "";
+          passwords_div.parentNode.innerHTML +=
+              '<br><button type="button" id="add_password_button" title="Add Password Input" onclick="addPassword(event);">Password</button>';
       }
       function removePassword(event, id){
           event.preventDefault();

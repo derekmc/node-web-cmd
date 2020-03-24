@@ -1,3 +1,53 @@
+// 
+// main.js
+//
+// This is the main file for node-web-cmd, which supports writing
+// commandline tools that are accessed from a browser interface,
+// over the network, and are rendered on the server.
+//
+// Node.js was chosen for two reasons: it provides modern tools and
+// a well maintained environment, (hopefully that includes security,
+// I will have to do my homework there),
+// and because javascript and es6 are common, well known languages,
+// which helps for writing apps.
+//
+// There are three supported tools that developers may create
+// by implementing a single function:
+//   * Apps
+//   * User Apps
+//   * Commands - commands can manipulate user_info and user_config.
+// 
+// Each type of function accepts 3 arguments:
+//   * args: the command line arguments, including the name of the tool.
+//   * puts: use this to write to standard out.
+//   * data: additional data unique to each tool.
+//
+// Here are the data arguments that are provided to each respective tool type:
+//
+// App 'data' arguments ====
+//  user_key: the session_cookie or user_id, depending on whether the user is logged in.
+//  app_state: the state for a particular app. if it is a "User App", it wraps 'user_states'.
+//
+// User App 'data' arguments ====
+//  user_state:
+//    user apps are called from a wrapper around normal apps, that
+//    only passes 'user_state' variable, from the 'user_states' property
+//    of a normal App's 'app_state'.  The 'user_states' lookup key,
+//    called 'user_key', is 'user_id' if they are logged in, and 'session_cookie'
+//    otherwise.
+//
+// Command 'data' arguments ====
+//    user_info:
+//       null if not logged in, otherwise {user_id, user_name}.
+//       To create a new user, set this value to {user_name, password_salt, password_hash, password_hash_func}.
+//    user_config: the user's configuration for the terminal
+//    (TODO) session_config: the configuration is always based on the session.
+//    
+//  
+//  
+
+// Command 'data' arguments
+
 
 let http = require('http');
 let fs = require('fs');
@@ -90,8 +140,6 @@ function loadApp(appname, filename){
     Apps[appname] = app;
 }
 
-// 
-
 // wrap the app to keep per user/ per session state.
 function loadUserApp(appname, filename){
     app = require(filename);
@@ -178,7 +226,8 @@ Commands.help = function(args, puts, data){
             if(row.length) puts(" " + row.join(', '));
         }
         puts("Type \"help <command>\" for command help.");
-        return; }
+        return;
+    }
     //args.push('help'); }
     for(var i=1; i<args.length; ++i){
         let cmd = args[i];
@@ -456,7 +505,7 @@ let server = http.createServer(function(request, response){
                 template_data[key] = page_data.config[key];
             }
 
-            console.log('template_data', template_data);
+            //console.log('template_data', template_data);
             response.writeHead(200, headers);
             let html = cmd_page(template_data);
             response.end(html);

@@ -1,21 +1,21 @@
 // 
 // main.js
 //
+//  Use for building custom scientific, statistical, and accounting tools,
+//  that can be accessed and used over a SaaS online interface.
+//
 // This is the main file for node-web-cmd, which supports writing
 // commandline tools that are accessed from a browser interface,
 // over the network, and are rendered on the server.
 //
-// Node.js was chosen for two reasons: it provides modern tools and
-// a well maintained environment, (hopefully that includes security,
-// I will have to do my homework there),
-// and because javascript and es6 are common, well known languages,
-// which helps for writing apps.
+// Node.js was chosen for two reasons: it provides modern tools
+// and because javascript is a well known language.
 //
 // There are three supported tools that developers may create
 // by implementing a single function:
 //   * Apps
 //   * User Apps
-//   * Commands - commands can manipulate user_info and user_config.
+//   * Commands - commands can manipulate user_logins and user_config.
 // 
 // Each type of function accepts 3 arguments:
 //   * args: the command line arguments, including the name of the tool.
@@ -48,7 +48,6 @@
 
 // Command 'data' arguments
 
-
 let http = require('http');
 let fs = require('fs');
 let qs = require('querystring');
@@ -70,19 +69,20 @@ function Default(value, _default){
 const DB_FILE = "webapp_data.json";
 const SAVE_INTERVAL = 10*1000;
 const VERBOSE = false;
-const PASSWORD_FIELD_PREFIX = "cmd_password_input_";
-const APP_DATA = "app_data|";
+
 // map of session_cookie to user_ids.  Guest sessions have empty string id: "".
 // if it's a guest session, store the app user_data by session_cookie, and not user_id.
-const USERS = "users|";
-const USER_SESSIONS = "user_sessions";
-const USER_INFOS = "user_infos"; // map of user_ids, to salt, password_hash, etc.
-const USER_CONFIGS = "user_configs";
-const SESSION_COOKIE_LEN = 20;
-const USER_ID_LEN = 10;
-const SESSION_COOKIE_NAME = "SESSION_COOKIE";
-const GUEST_COOKIE_VALUE = ;
-const PASSWORD_MINLENGTH = 6;
+const {
+    USERS,
+    SAVE_INTERVAL,
+    PASSWORD_FIELD_PREFIX,
+    APP_DATA,
+    USER_CONFIGS,
+    USER_INFOS,
+    SESSION_COOKIE_LEN,
+    USER_ID_LEN,
+    PASSWORD_MINLENGTH
+} = require("./const.js");
 
 loadUserApp('guess', './app/guess.js');
 loadCmd('config', './cmd/config.js');

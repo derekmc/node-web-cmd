@@ -74,12 +74,14 @@ const PASSWORD_FIELD_PREFIX = "cmd_password_input_";
 const APP_DATA = "app_data|";
 // map of session_cookie to user_ids.  Guest sessions have empty string id: "".
 // if it's a guest session, store the app user_data by session_cookie, and not user_id.
+const USERS = "users|";
 const USER_SESSIONS = "user_sessions";
 const USER_INFOS = "user_infos"; // map of user_ids, to salt, password_hash, etc.
 const USER_CONFIGS = "user_configs";
 const SESSION_COOKIE_LEN = 20;
 const USER_ID_LEN = 10;
 const SESSION_COOKIE_NAME = "SESSION_COOKIE";
+const GUEST_COOKIE_VALUE = ;
 const PASSWORD_MINLENGTH = 6;
 
 loadUserApp('guess', './app/guess.js');
@@ -199,7 +201,7 @@ Commands.newuser = function(args, puts, data){
 
 }
 Commands.useraccount = function(args, puts, data){
-
+    //args.
 }
 Commands.help = function(args, puts, data){
     if(args.length == 1){
@@ -277,7 +279,48 @@ function dumpHist(hist){
     return result_array.join(NEW_CONTEXT) + "\n";
 }
 
+function parseCookies(str){
+    let result = {};
+    let parts = cookies.split(/\;\s*/g);
+    for(let i=0; i<parts.length; ++i){
+        let part = parts[i];
+        let index = part.indexOf("=");
+        if(index > 0){
+            let key = part.substr(0, index).trim();
+            let value = part.substr(index+1).trim();
+            result[key] = value;
+        }
+    }
+    return result;
+}
+
+
+// Database data schema
+// difference between guest and a user? A user has login info.
+// sessions:
+//   { session_cookie : user_id },
+// users|user_id
+// user_configs:
+//   { user_id : config }
+// user_sessions|user_id
+//   { user_id : [session_cookies] },
+// user_logins:
+//   { user_id: {username, password, salt} }
+// app_data|app_name
+//   { user_states : state } 
+// user_sessions
+user_configs
+
+// Main server function involves the following steps:
+//  0 - Initialize headers, page_data
+//  1 - Get session_cookie from request
+//  2 - Get server_data {user_configs, user_sessions, user_infos}
+//  3 - Ensure session_cookie is set.
+
 let server = http.createServer(function(request, response){
+
+    // Step 0 - Initialize headers, page_data
+    let headers = {"Content-Type": "text/html"};
     let page_data = {
         "title": "cmd",
         "config" : parseConfig(DEFAULT_CONFIG),
@@ -288,43 +331,47 @@ let server = http.createServer(function(request, response){
         "app_state" : "",
         "session_cookie": "",
     }
-    let headers = {"Content-Type": "text/html"};
 
     
-    if(request.headers.hasOwnProperty('cookie')){
-        let cookies = request.headers['cookie']
-        let parts = cookies.split(/\;\s*/g);
-        for(let i=0; i<parts.length; ++i){
-            let part = parts[i];
-            let index = part.indexOf("=");
-            if(index > 0){
-                let key = part.substr(0, index).trim();
-                let value = part.substr(index+1).trim();
-                if(key == SESSION_COOKIE_NAME){
-                   if(alphanum_regex.test(value)){
-                      page_data.session_cookie = value; }}
-            }
-        }
+    // Step 1 - Get session_cookie from request
+    let request_cookies = parseCookies(request.headers['cookie']);
+    if(request_cookies.hasOwnProperty(SESSION_COOKIE_NAME)){
+        page_data.session_cookie = request_cookies[SESSION_COOKIE_NAME];
     }
-    // cmd_keys = ;
-    let cmd_keys = { user_configs: USER_CONFIGS,
-                     user_sessions: USER_SESSIONS,
-                     user_infos: USER_INFOS };
-    db.get(cmd_keys, function(server_data){
-        server_data.user_sessions = Default(server_data.user_sessions, {});
-        server_data.user_configs = Default(server_data.user_configs, {});
-        server_data.user_infos = Default(server_data.user_infos, {});
 
+    // Step 2 - Get server_data from database
+    let server_keys = { user_configs: USER_CONFIGS,
+                        user_sessions: USER_SESSIONS };
+    db.get(server_keys, function(server_data){
+        server_data.user_configs = Default(server_data.user_configs, {});
+        server_data.user_sessions = Default(server_data.user_sessions, {});
+
+        // Step 3 - Ensure session_cookie is set.
         if(page_data.session_cookie == ""){
             page_data.session_cookie = randstr(ALPHANUMS, SESSION_COOKIE_LEN);
             if(server_data.user_sessions == undefined){
                 server_data.user_sessions = {};
                 server_data.user_sessions[page_data.session_cookie] =  ""; }
-            db.set({user_sessions:USER_SESSIONS}, server_data); 
+            let key_info = {
+               prefix: USERS,
+               len: SESSION_COOKIE_LEN,
+            }
+            db.genId(args.tries, {
+                
+            });
+
+
+            db.genId({
             headers['Set-Cookie'] = SESSION_COOKIE_NAME + "=" + page_data.session_cookie + ";";
         }
 
+        // Step 4 - Set user_key to the session_cookie, or the app_data.
         // session_cookie is user_key if user is not logged in.
+        // sort of weird to have a datavalue that involves two possible disparate sets.
+        // so we would have to check, that every session_cookie created, is not already
+        // a user_key, and every user_key created is not already a session_cookie.
+        // maybe sessions should come in two types, either guest_session or user_session.
+
         let user_key = null;
         if(!(page_data.session_cookie in server_data.user_sessions) || server_data.user_sessions[page_data.session_cookie] == ""){
             user_key = page_data.session_cookie;
@@ -335,6 +382,11 @@ let server = http.createServer(function(request, response){
         let cmd_data = { user_info: Default(server_data.user_infos[user_key], {}),
                          user_config: Default(server_data.user_configs[user_key], {}) }
 
+        //
+        //
+        // users 
+        // 
+        //
         if(user_key in server_data.user_configs && server_data.user_configs[user_key].length){
             let server_config = parseConfig(server_data.user_configs[user_key]);
             for(let k in server_config){
@@ -454,12 +506,12 @@ let server = http.createServer(function(request, response){
                         let app_data_key = APP_DATA + page_data.app_name;
                         db.get(app_data_key,
                             function(app_state){
-                                cmd_keys.app_state = app_data_key;
+                                server_keys.app_state = app_data_key;
                                 server_data.app_state = Apps[page_data.app_name](args, puts,
                                     {app_state: app_state,
                                      passwords: page_data.passwords,
                                      user_key: user_key});
-                                db.set(cmd_keys, server_data); })
+                                db.set(server_keys, server_data); })
                     }
                 }
                 else if(cmd in Commands){
@@ -470,7 +522,7 @@ let server = http.createServer(function(request, response){
                     console.log('page config, cmd config:', page_data.config, cmd_data.config);
                     server_data.user_configs[user_key] = dumpConfig(page_data.config);
                     server_data.user_infos[user_key] = server_data.user_info;
-                    db.set(cmd_keys, server_data); }
+                    db.set(server_keys, server_data); }
                 else{
                     puts(" Unknown command: '" + cmd + "'"); }}
             // wrap puts to start all lines with a space.

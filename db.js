@@ -5,6 +5,11 @@ const ALPHANUMS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012345678
 const DEFAULT_LEN = 4;
 const DEFAULT_TRIES = 4;
 
+
+// 'next' callbacks use the following format:
+//    next(err, result)
+// 
+
 let __data = {};
 // gets 'ids' from all keys matching the prefix.
 exports.getIds = function(prefix, next){
@@ -111,26 +116,34 @@ function randstr(chars, len){
 
 // generates new id according to parameters,
 // sets the value with the prefix, and passes id to next.
-// optional: idRef is a unique lookup reference to the id, must be empty.
+// optional: reference is a unique lookup reference to the id, must be empty.
+/// args: {
+//    prefix, // the key's prefix.
+//    reference, // store a reference to the key here.
+//    refOnly, // only store a reference, and don't make anything else.
+//    len, // the length of the key to generate
+//    tries, // how many times to repeat attempts.
+//    init, // the initialization function.
+// }
 exports.genId = function(args, next){
     if(!next || (typeof next != 'function')) throw new Error('no next func');
     let prefix = args.prefix? args.prefix : "";
-    let idRef = args.idRef; // make sure idRef is empty if provided.
+    let reference = args.reference; // make sure reference is empty if provided.
     let refOnly = args.refOnly; 
     let chars = args.chars? args.chars : ALPHANUMS;
     let len = args.len? args.len : DEFAULT_LEN;
     let tries = args.tries? args.tries : DEFAULT_TRIES;
     let init = ('init' in args)? args.init : null;
-    if(idRef && (idRef in __data)){
-        console.log('idRef', idRef);
-        next(`idRef '${idRef}' already exists.`, __data[idRef]);
+    if(reference && (reference in __data)){
+        console.log('reference', reference);
+        next(`reference '${reference}' already exists.`, __data[reference]);
         return; }
     for(let i=0; i<tries; ++i){
         let id = randstr(chars, len);
         let k = prefix + id;
         if(!(k in __data)){
             if(!refOnly){ __data[k] = init; }
-            if(idRef){ __data[idRef] = id; }
+            if(reference){ __data[reference] = id; }
             next(undefined, id);
             return;
         }

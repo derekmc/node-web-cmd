@@ -67,7 +67,6 @@ function Default(value, _default){
 }
 
 const DB_FILE = "webapp_data.json";
-const SAVE_INTERVAL = 10*1000;
 const VERBOSE = false;
 
 // map of session_cookie to user_ids.  Guest sessions have empty string id: "".
@@ -297,17 +296,13 @@ function parseCookies(str){
 
 // Database data schema
 // difference between guest and a user? A user has login info.
-// sessions:
-//   { session_cookie : user_id },
+// sessions|session_cookie: user_id
 // users|user_id
-// user_configs:
-//   { user_id : config }
-// user_sessions|user_id
-//   { user_id : [session_cookies] },
-// user_logins:
-//   { user_id: {username, password, salt} }
-// app_data|app_name
-//   { user_states : state } 
+// user_config|user_id: config
+// user_sessions|user_id: [session_cookies]
+// user_logins|user_id: {username, password, salt}
+// app_data|app_name: { user_states : state } 
+//   
 // user_sessions
 user_configs
 
@@ -317,7 +312,9 @@ user_configs
 //  2 - Get server_data {user_configs, user_sessions, user_infos}
 //  3 - Ensure session_cookie is set.
 
-let server = http.createServer(function(request, response){
+let server = http.createServer(serverHandle);
+
+async function serverHandle(request, response){
 
     // Step 0 - Initialize headers, page_data
     let headers = {"Content-Type": "text/html"};
@@ -339,6 +336,14 @@ let server = http.createServer(function(request, response){
         page_data.session_cookie = request_cookies[SESSION_COOKIE_NAME];
     }
 
+    // Step 2 - Generate session_cookie if it does not exist.
+    if(page_data.session_cookie == ""){
+        let session_key_info = {
+            prefix: se
+        ;
+
+        db.genId
+    db
     // Step 2 - Get server_data from database
     let server_keys = { user_configs: USER_CONFIGS,
                         user_sessions: USER_SESSIONS };
@@ -356,7 +361,8 @@ let server = http.createServer(function(request, response){
                prefix: USERS,
                len: SESSION_COOKIE_LEN,
             }
-            db.genId(args.tries, {
+            db.genId(key_info, function(err, id){
+                
                 
             });
 

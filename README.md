@@ -65,3 +65,15 @@ function advancedCallback(args, puts, db, app_context){
     }
 }
 ```
+
+
+TODO
+```
+app_command(args: ['cmd', 'arg1'...], callbacks: {puts, userSet, globalTransaction}, data: {user_state, global_state, app_context}){
+   return 
+}
+app_map
+app_reduce
+
+```
+Where global_state is just a mapped and reduced list of transactions.

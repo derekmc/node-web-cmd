@@ -69,7 +69,8 @@ function advancedCallback(args, puts, db, app_context){
 
 TODO
 ```
-app_command(args: ['cmd', 'arg1'...], callbacks: {puts, userSet, globalTransaction}, data: {user_state, global_state, app_context}){
+// transactions change the global data.
+app_command(args: ['cmd', 'arg1'...], call: {puts, userSet, appSet, transaction}, data: {user, global, app}){
    return 
 }
 app_map

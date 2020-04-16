@@ -80,9 +80,9 @@ let App = {
    cmd: function(args, call, data){
       let {puts, appSet, userSet, transaction} = call;
       let {user, global, app} = data;
-   }
+   },
    // map reduce transforms the transactions into the global state
-   map: function(transaction){ 
+   map: function(transaction){ },
    reduce: function(accumulator, transaction){
    }
 }

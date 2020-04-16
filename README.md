@@ -69,12 +69,23 @@ function advancedCallback(args, puts, db, app_context){
 
 TODO
 ```
-// transactions change the global data.
-app_command(args: ['cmd', 'arg1'...], call: {puts, userSet, appSet, transaction}, data: {user, global, app}){
-   return 
+// build from the inside out
+
+// a app has potentially 3 parts
+// app_command
+// app_map
+// app_reduce
+
+let App = {
+   cmd: function(args, call, data){
+      let {puts, appSet, userSet, transaction} = call;
+      let {user, global, app} = data;
+   }
+   // map reduce transforms the transactions into the global state
+   map: function(transaction){ 
+   reduce: function(accumulator, transaction){
+   }
 }
-app_map
-app_reduce
 
 ```
 Where global_state is just a mapped and reduced list of transactions.

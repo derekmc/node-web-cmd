@@ -19,6 +19,9 @@ exports.getIds = function(prefix, next){
             result.push(k.substr(prefix.length)); }}
     next(undefined, result);
 }
+exports.dump = function(next){
+    next(JSON.stringify(__data)); 
+}
 exports.save = function(filename, next){
     fs.writeFile(filename? filename : DEFAULT_DB_FILE,
         JSON.stringify(__data), (err)=>{if(next) next(err)});
@@ -60,7 +63,7 @@ exports.get = function(key, next){
 // setNew forces it to be a newkey.
 exports.set = function(key, value, next){
     if(!next) next = function(){}
-    if(typeof next != 'function') throw new Error('no next func');
+    if(typeof next != 'function') throw new Error('\'next\' was not a function.');
     let keytype = typeof key;
 
     if(keytype == "object"){
@@ -116,11 +119,9 @@ function randstr(chars, len){
 
 // generates new id according to parameters,
 // sets the value with the prefix, and passes id to next.
-// optional: reference is a unique lookup reference to the id, must be empty.
 /// args: {
 //    prefix, // the key's prefix.
-//    reference, // store a reference to the key here.
-//    refOnly, // only store a reference, and don't make anything else.
+//    chars, // the legal characters for the key.
 //    len, // the length of the key to generate
 //    tries, // how many times to repeat attempts.
 //    init, // the initialization function.
@@ -128,26 +129,70 @@ function randstr(chars, len){
 exports.genId = function(args, next){
     if(!next || (typeof next != 'function')) throw new Error('no next func');
     let prefix = args.prefix? args.prefix : "";
-    let reference = args.reference; // make sure reference is empty if provided.
-    let refOnly = args.refOnly; 
     let chars = args.chars? args.chars : ALPHANUMS;
     let len = args.len? args.len : DEFAULT_LEN;
     let tries = args.tries? args.tries : DEFAULT_TRIES;
     let init = ('init' in args)? args.init : null;
-    if(reference && (reference in __data)){
-        console.log('reference', reference);
-        next(`reference '${reference}' already exists.`, __data[reference]);
-        return; }
     for(let i=0; i<tries; ++i){
         let id = randstr(chars, len);
         let k = prefix + id;
         if(!(k in __data)){
-            if(!refOnly){ __data[k] = init; }
-            if(reference){ __data[reference] = id; }
+            __data[k] = init;
             next(undefined, id);
             return;
         }
     }
     next('Could not find available key', null);
     return;
+}
+
+exports.promiseAPI = {};
+exports.promiseAPI.getIds = (prefix)=> {
+    return new Promise((resolve, reject) => {
+        exports.getIds(prefix, (err, result)=> {
+            if(err) reject(err);
+            else resolve(result);
+        })
+    })
+}
+exports.promiseAPI.save = (filename) => {
+    return new Promise((resolve, reject) => {
+        exports.save(filename, (err)=>{
+            if(err) reject(err);
+            else resolve();
+        })
+    })
+}
+exports.promiseAPI.dump = () => {
+    return new Promise((resolve, reject) => {
+        exports.dump((s)=>{
+            resolve(s);
+        })
+    })
+}
+exports.promiseAPI.get = (key) => {
+    return new Promise((resolve, reject) => {
+        exports.get(key, (err, value) => {
+            if(err) reject(err);
+            else resolve(value);
+        })
+    })
+}
+
+exports.promiseAPI.set = (key, value) => {
+    return new Promise((resolve, reject) => {
+        exports.set(key, value, (err) => {
+            if(err) reject(err);
+            else resolve();
+        })
+    })
+}
+
+exports.promiseAPI.genId = (args) => {
+    return new Promise((resolve, reject) => {
+        exports.genId(args, (err, id) => {
+            if(err) reject(err);
+            else resolve(id);
+        })
+    })
 }

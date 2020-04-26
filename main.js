@@ -82,6 +82,7 @@ const {
     SESSION_COOKIE_LEN,
     SESSION_COOKIE_NAME,
     USER_ID_LEN,
+    USER_SESSIONS,
     PASSWORD_MINLENGTH,
     GUEST_ID,
 } = require("./const.js");
@@ -333,6 +334,7 @@ async function serverHandle(request, response){
         "app_state" : "",
         "session_cookie": "",
         "user_id": GUEST_ID,
+        "user_key": "",
     }
 
     
@@ -357,6 +359,7 @@ async function serverHandle(request, response){
     let user_key = page_data.user_id;
     if(user_key == GUEST_ID){
         user_key = page_data.session_cookie; }
+    page_data.user_key = user_key;
 
     // Step 4 - Get cmd_data {user_config, user_info} from database.
     let cmd_keys = { user_info: USER_INFOS + user_key,
@@ -384,7 +387,7 @@ async function serverHandle(request, response){
                 response.end('<!doctype html><html><head><title>413</title></head><body>413: Request Entity Too Large</body></html>');
             }
         });
-        request.on('end', function(){
+        request.on('end', async function(){
             try{
                 let formData = qs.parse(requestBody);
 
@@ -433,7 +436,7 @@ async function serverHandle(request, response){
                 }
 
                 let puts = function(s){ page_data.cmd_out += "\n" + s; }
-                handleCommand(page_data.cmd_text, puts, page_data);
+                await handleCommand(page_data.cmd_text, puts, page_data);
                 cmdPage(page_data);
             }
             catch(error){
@@ -447,7 +450,7 @@ async function serverHandle(request, response){
         let html = "<h1>Unhandled error.</h1>";
         response.end(html);
     }
-    function handleCommand(cmd_text, puts, page_data){
+    async function handleCommand(cmd_text, puts, page_data){
         if(!cmd_text) cmd_text = "";
         puts("> " + cmd_text);
         // aliases require full match
@@ -468,7 +471,8 @@ async function serverHandle(request, response){
                 page_data.cmd_hist.push([]); // add a new layer of history.
                 // when entering app, remove appname from args
                 args = args.slice(1);
-                page_data.app_state; }
+                page_data.app_state;
+            }
             if(page_data.app_name.length){
                 if(cmd == "exit"){
                     page_data.cmd_out = page_data.base_cmd_out;
@@ -499,11 +503,16 @@ async function serverHandle(request, response){
                 for(var k in cmd_data.user_config){
                     page_data.config[k] = cmd_data.user_config[k]; }
                 console.log('page config, cmd config:', page_data.config, cmd_data.config);
-                server_data.user_configs[user_key] = dumpConfig(page_data.config);
-                server_data.user_infos[user_key] = server_data.user_info;
-                db.set(server_keys, server_data); }
+                await db.set(USER_CONFIGS + user_key, dumpConfig(page_data.config));
+                //await db.set(USER_INFOS + , dumpConfig(page_data.config));
+                //server_data.user_configs[user_key] = dumpConfig(page_data.config);
+                //server_data.user_infos[user_key] = server_data.user_info;
+                //db.set(server_keys, server_data);
+            }
             else{
-                puts(" Unknown command: '" + cmd + "'"); }}
+                puts(" Unknown command: '" + cmd + "'");
+            }
+        }
         // wrap puts to start all lines with a space.
         function _puts(s){ puts(' ' + s); }
     }

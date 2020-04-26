@@ -78,7 +78,9 @@ const {
     APP_DATA,
     USER_INFOS,
     USER_CONFIGS,
+    COOKIE,
     SESSION_COOKIE_LEN,
+    SESSION_COOKIE_NAME,
     USER_ID_LEN,
     PASSWORD_MINLENGTH,
     GUEST_ID,
@@ -280,8 +282,9 @@ function dumpHist(hist){
 }
 
 function parseCookies(str){
+    if(!str) return {};
     let result = {};
-    let parts = cookies.split(/\;\s*/g);
+    let parts = str.split(/\;\s*/g);
     for(let i=0; i<parts.length; ++i){
         let part = parts[i];
         let index = part.indexOf("=");

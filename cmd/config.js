@@ -28,6 +28,7 @@ function mergeMap(a, b){
 // "property1 value1 property2 value2"
 exports.parseConfig = parseConfig;
 function parseConfig(config_str){
+    if(!config_str) return {};
     let array = config_str.split(/\s+/);
     let result = {};
     for(let i=0; i<array.length - 1; i += 2){

@@ -163,6 +163,15 @@ exports.promiseAPI.save = async (filename) => {
         })
     })
 }
+
+exports.promiseAPI.load = async (filename) => {
+    return new Promise((resolve, reject) => {
+        exports.load(filename, (err)=>{
+            if(err) reject(err);
+            else resolve();
+        })
+    })
+}
 exports.promiseAPI.dump = async () => {
     return new Promise((resolve, reject) => {
         exports.dump((s)=>{

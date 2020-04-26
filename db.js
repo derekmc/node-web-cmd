@@ -20,7 +20,7 @@ exports.getIds = function(prefix, next){
     next(undefined, result);
 }
 exports.dump = function(next){
-    next(JSON.stringify(__data)); 
+    next(undefined, JSON.stringify(__data)); 
 }
 exports.save = function(filename, next){
     fs.writeFile(filename? filename : DEFAULT_DB_FILE,
@@ -57,7 +57,7 @@ exports.get = function(key, next){
     else{
         result = __data[key];
     }
-    return next(result);
+    return next(undefined, result);
 }
 
 // setNew forces it to be a newkey.
@@ -105,7 +105,7 @@ exports.set = function(key, value, next){
         else{
             __data[key] = value; }
     }
-    return next();
+    return next(undefined);
 }
 
 function randstr(chars, len){
@@ -147,7 +147,7 @@ exports.genId = function(args, next){
 }
 
 exports.promiseAPI = {};
-exports.promiseAPI.getIds = (prefix)=> {
+exports.promiseAPI.getIds = async (prefix)=> {
     return new Promise((resolve, reject) => {
         exports.getIds(prefix, (err, result)=> {
             if(err) reject(err);
@@ -155,7 +155,7 @@ exports.promiseAPI.getIds = (prefix)=> {
         })
     })
 }
-exports.promiseAPI.save = (filename) => {
+exports.promiseAPI.save = async (filename) => {
     return new Promise((resolve, reject) => {
         exports.save(filename, (err)=>{
             if(err) reject(err);
@@ -163,14 +163,14 @@ exports.promiseAPI.save = (filename) => {
         })
     })
 }
-exports.promiseAPI.dump = () => {
+exports.promiseAPI.dump = async () => {
     return new Promise((resolve, reject) => {
         exports.dump((s)=>{
             resolve(s);
         })
     })
 }
-exports.promiseAPI.get = (key) => {
+exports.promiseAPI.get = async (key) => {
     return new Promise((resolve, reject) => {
         exports.get(key, (err, value) => {
             if(err) reject(err);
@@ -179,7 +179,7 @@ exports.promiseAPI.get = (key) => {
     })
 }
 
-exports.promiseAPI.set = (key, value) => {
+exports.promiseAPI.set = async (key, value) => {
     return new Promise((resolve, reject) => {
         exports.set(key, value, (err) => {
             if(err) reject(err);
@@ -188,7 +188,7 @@ exports.promiseAPI.set = (key, value) => {
     })
 }
 
-exports.promiseAPI.genId = (args) => {
+exports.promiseAPI.genId = async (args) => {
     return new Promise((resolve, reject) => {
         exports.genId(args, (err, id) => {
             if(err) reject(err);

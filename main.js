@@ -302,7 +302,6 @@ function parseCookies(str){
 // Database data schema
 // difference between guest and a user? A user has login info.
 // sessions|session_cookie: user_id
-// users|user_id
 // user_config|user_id: config
 // user_sessions|user_id: [session_cookies]
 // user_logins|user_id: {username, password, salt}
@@ -316,7 +315,7 @@ function parseCookies(str){
 //  Step 1 - Get session_cookie from request, and user_id from database.
 //  Step 2 - Generate session_cookie if not set.
 //  Step 3 - Set user_key to the user_id, or to the session_cookie if a guest session.
-//  Step 4 - Get cmd_data {user_config, user_info} from database.
+//  Step 4 - Get cmd_data {user_config} from database.
 
 let server = http.createServer(serverHandle);
 
@@ -362,16 +361,16 @@ async function serverHandle(request, response){
     page_data.user_key = user_key;
 
     // Step 4 - Get cmd_data {user_config, user_info} from database.
-    let cmd_keys = { user_info: USER_INFOS + user_key,
-                     user_configs: USER_CONFIGS + user_key, };
+    let cmd_keys = { user_config: USER_CONFIGS + user_key, };
     let cmd_data = await db.get(cmd_keys);
-    cmd_data.user_info = Default(cmd_data.user_info, {});
+    // console.log('cmd_data', cmd_data);
+    // cmd_data.user_info = Default(cmd_data.user_info, {});
     cmd_data.user_config = Default(parseConfig(cmd_data.user_config), parseConfig(DEFAULT_CONFIG));
     for(let key in cmd_data.user_config){
         page_data.config[key] = cmd_data.user_config[key];
     }
     // TODO save user_config after command processing.
-    console.log('page_data.config', page_data.config);
+    // console.log('page_data.config', page_data.config);
 
     // Step 5 - handle GET or POST
     if(request.method == "GET"){
@@ -502,7 +501,7 @@ async function serverHandle(request, response){
                 Commands[cmd](args, _puts, cmd_data);
                 for(var k in cmd_data.user_config){
                     page_data.config[k] = cmd_data.user_config[k]; }
-                console.log('page config, cmd config:', page_data.config, cmd_data.config);
+                // console.log('page config, cmd config:', page_data.config, cmd_data.config);
                 await db.set(USER_CONFIGS + user_key, dumpConfig(page_data.config));
                 //await db.set(USER_INFOS + , dumpConfig(page_data.config));
                 //server_data.user_configs[user_key] = dumpConfig(page_data.config);

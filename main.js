@@ -165,6 +165,7 @@ function loadApp(appname, filename){
 }
 
 Aliases.dark = 'config bg 000 fg fff';
+Aliases.retro = 'config bg 000 fg 6fa';
 Aliases.light = 'config bg fff fg 000';
 Aliases.small = 'config rows 13 cols 25';
 Aliases.medium = 'config rows 19 cols 54';

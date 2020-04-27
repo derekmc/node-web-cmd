@@ -160,8 +160,7 @@ function loadCmd(cmdname, filename){
 // callback convention.
 function loadApp(appname, filename){
     let app = require(filename);
-    // app(state, args, puts, child_name, child_state) TODO
-    // should be an asychronous function, returning a promise.
+    // app(args, puts, data: {user_state, app_state}) TODO
     Apps[appname] = app;
 }
 
@@ -484,7 +483,7 @@ async function serverHandle(request, response){
                         'user_state' : user_state_key,
                     }
                     let data = await db.get(app_keys);
-                    let result = await Apps[page_data.app_name](args, puts, data); let save_result_keys = {};
+                    let result = Apps[page_data.app_name](args, puts, data); let save_result_keys = {};
 
                     let save_keys = {};
                     let save_data = {}; // copy results we want to save, to save_data

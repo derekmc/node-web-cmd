@@ -151,6 +151,7 @@ function loadUserApp(appname, filename){
     Apps[appname] = function(args, puts, data){
         let state = data.app_state;
         let user_key = data.user_key;
+        // console.log('state, user_key', state, user_key);
         if(state == null || !state.user_states){
             state = {user_states:{}};
         }
@@ -359,6 +360,7 @@ async function serverHandle(request, response){
     if(user_key == GUEST_ID){
         user_key = page_data.session_cookie; }
     page_data.user_key = user_key;
+    console.log('user_key', user_key);
 
     // Step 4 - Get cmd_data {user_config, user_info} from database.
     let cmd_keys = { user_config: USER_CONFIGS + user_key, };
@@ -486,14 +488,17 @@ async function serverHandle(request, response){
                     // TODO handle app_context.
                     // TODO handle
                     let app_data_key = APP_DATA + page_data.app_name;
-                    db.get(app_data_key,
-                        function(app_state){
-                            server_keys.app_state = app_data_key;
-                            server_data.app_state = Apps[page_data.app_name](args, puts,
-                                {app_state: app_state,
-                                 passwords: page_data.passwords,
-                                 user_key: user_key});
-                            db.set(server_keys, server_data); })
+                    let app_state = await db.get(app_data_key);
+                    let server_keys = {
+                        "app_state" : app_data_key,
+                    }
+                    let server_data = {
+                        "app_state": Apps[page_data.app_name](args, puts,
+                            {app_state: app_state,
+                             passwords: page_data.passwords,
+                             user_key: user_key})
+                    }
+                    await db.set(server_keys, server_data); 
                 }
             }
             else if(cmd in Commands){

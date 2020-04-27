@@ -21,5 +21,5 @@ exports.SESSION_COOKIE_LEN = 20;
 exports.USER_ID_LEN = 10;
 exports.PASSWORD_MINLENGTH = 6;
 exports.SESSION_COOKIE_NAME = "SessionCookie";
-exports.GUEST_ID = "--GUEST--";
+exports.GUEST_ID = "|GUEST|";
 

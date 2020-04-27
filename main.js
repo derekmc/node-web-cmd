@@ -91,10 +91,26 @@ loadUserApp('guess', './app/guess.js');
 loadCmd('config', './cmd/config.js');
 let {parseConfig, dumpConfig, DEFAULT_CONFIG} = require('./cmd/config.js');
 
-db.load(DB_FILE, function(){
-   if(VERBOSE) console.log('database loaded: ' + DB_FILE); });
 
-setInterval(()=>db.save(DB_FILE, ()=>{if(VERBOSE) console.log('database saved: ' + DB_FILE)}), SAVE_INTERVAL);
+// load database
+(async ()=>{
+    try{
+        await db.load(DB_FILE); 
+        if(VERBOSE) console.log('database loaded: ' + DB_FILE);
+    } catch(err) {
+        console.err("error loading database file", err);
+    }
+})()
+
+// save database on intervals
+setInterval(async ()=>{
+    try{ 
+        await db.save(DB_FILE);
+        if(VERBOSE) console.log('database saved: ' + DB_FILE);
+    } catch(err) {
+        console.err("error saving database file", err);
+    }
+}, SAVE_INTERVAL);
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
 const NEW_CONTEXT = "==NEW CONTEXT==";
@@ -357,10 +373,12 @@ async function serverHandle(request, response){
 
     // Step 3 - Set user_key to user_id, or to session_cookie if guest session.
     let user_key = page_data.user_id;
+    if(user_key == undefined){
+        user_key = page_data.user_id = GUEST_ID; }
     if(user_key == GUEST_ID){
         user_key = page_data.session_cookie; }
     page_data.user_key = user_key;
-    console.log('user_key', user_key);
+    // console.log('user_key', user_key);
 
     // Step 4 - Get cmd_data {user_config, user_info} from database.
     let cmd_keys = { user_config: USER_CONFIGS + user_key, };

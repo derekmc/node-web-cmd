@@ -76,8 +76,10 @@ const {
     SAVE_INTERVAL,
     PASSWORD_FIELD_PREFIX,
     APP_DATA,
-    USER_INFOS,
     USER_CONFIGS,
+    USER_LOGINS,
+    USER_APP_DATA,
+    USER_INFOS,
     COOKIE,
     SESSION_COOKIE_LEN,
     SESSION_COOKIE_NAME,
@@ -87,7 +89,7 @@ const {
     GUEST_ID,
 } = require("./const.js");
 
-loadUserApp('guess', './app/guess.js');
+loadApp('guess', './app/guess.js');
 loadCmd('config', './cmd/config.js');
 let {parseConfig, dumpConfig, DEFAULT_CONFIG} = require('./cmd/config.js');
 
@@ -98,7 +100,7 @@ let {parseConfig, dumpConfig, DEFAULT_CONFIG} = require('./cmd/config.js');
         await db.load(DB_FILE); 
         if(VERBOSE) console.log('database loaded: ' + DB_FILE);
     } catch(err) {
-        console.err("error loading database file", err);
+        console.error("error loading database file", err);
     }
 })()
 
@@ -153,45 +155,15 @@ function loadCmd(cmdname, filename){
     HelpMessages[cmdname] = cmd_module.help;
     Commands[cmdname] = cmd_module.command;
 }
-// TODO normal apps need to be wrapped special to use the
+
+// apps have access to user_state and app_state, and can save either one.
 // callback convention.
 function loadApp(appname, filename){
     let app = require(filename);
     // app(state, args, puts, child_name, child_state) TODO
+    // should be an asychronous function, returning a promise.
     Apps[appname] = app;
 }
-
-// wrap the app to keep per user/ per session state.
-function loadUserApp(appname, filename){
-    app = require(filename);
-    Apps[appname] = function(args, puts, data){
-        let state = data.app_state;
-        let user_key = data.user_key;
-        // console.log('state, user_key', state, user_key);
-        if(state == null || !state.user_states){
-            state = {user_states:{}};
-        }
-        // todo wrap in another datastructure.
-        let user_state = (user_key in state.user_states)? state.user_states[user_key] : null;
-
-        user_state = app(args, puts, {user_state: user_state});
-        state.user_states[user_key] = user_state;
-        return state;
-    }
-}
-
-// TODO only sudo apps have access to password input.
-// a db app is just an app, but with access to a global state object,
-// and not per session state.
-// TODO should use callbacks.
-// function loadDataApp(db, /*filename,*/ appname){
-//    let app = require(filename);
-//    Apps[appname] = function(args, puts, state, app_context){
-//        return app(args, puts, state, db, app_context);
-//    }
-//    // dataapp(db, args, puts)
-//}
-// console.log('apps', Apps)
 
 Aliases.dark = 'config bg 000 fg fff';
 Aliases.light = 'config bg fff fg 000';
@@ -505,18 +477,26 @@ async function serverHandle(request, response){
                     // TODO handle data_context config parameter.
                     // TODO handle app_context.
                     // TODO handle
-                    let app_data_key = APP_DATA + page_data.app_name;
-                    let app_state = await db.get(app_data_key);
-                    let server_keys = {
-                        "app_state" : app_data_key,
+                    let app_state_key = APP_DATA + page_data.app_name;
+                    let user_state_key = USER_APP_DATA + user_key + "|" + page_data.app_name;
+                    let app_keys = {
+                        'app_state' : app_state_key,
+                        'user_state' : user_state_key,
                     }
-                    let server_data = {
-                        "app_state": Apps[page_data.app_name](args, puts,
-                            {app_state: app_state,
-                             passwords: page_data.passwords,
-                             user_key: user_key})
-                    }
-                    await db.set(server_keys, server_data); 
+                    let data = await db.get(app_keys);
+                    let result = await Apps[page_data.app_name](args, puts, data); let save_result_keys = {};
+
+                    let save_keys = {};
+                    let save_data = {}; // copy results we want to save, to save_data
+                    // Save whatever results were provided by the return value of the app.
+                    if(result.hasOwnProperty('user_state')){
+                        save_keys.user_state = user_state_key;
+                        save_data.user_state = result.user_state; }
+                    if(result.hasOwnProperty('app_state')){
+                        save_keys.app_state = app_state_key; 
+                        save_data.app_state = result.app_state; }
+
+                    await db.set(save_keys, save_data);
                 }
             }
             else if(cmd in Commands){

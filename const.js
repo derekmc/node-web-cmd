@@ -16,6 +16,7 @@ exports.USER_SESSIONS = "user_sessions|";
 exports.USER_CONFIGS = "user_configs|";
 exports.USER_LOGINS = "user_logins|";
 exports.USER_INFOS = "user_infos|";
+exports.USER_APP_DATA = "user_app_data|";
 exports.COOKIE = "cookie|";
 exports.SESSION_COOKIE_LEN = 20;
 exports.USER_ID_LEN = 10;

@@ -6,7 +6,7 @@ function randint(n){
     return 1 + Math.floor(n * Math.random());
 }
 
-function guessApp(args, puts, data){
+async function guessApp(args, puts, data){
     let max, n, guesses, max_guesses;
     let user_state = data.user_state;
     if(user_state == null || user_state == ""){
@@ -46,5 +46,5 @@ function guessApp(args, puts, data){
         user_state = [max, n, guesses, max_guesses].join(', ');
     }
     puts(msg);
-    return user_state;
+    return {user_state: user_state};
 }

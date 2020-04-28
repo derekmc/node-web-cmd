@@ -451,7 +451,8 @@ async function serverHandle(request, response){
         if(cmd_text in Aliases){
             cmd_text = Aliases[cmd_text]; }
         let args = cmd_text.split(/\s+/);
-        if(!args.length) return;
+        if(args[0] == "") args = [];
+        if(page_data.app_name == "" && !args.length) return;
         let cmd = args[0];
 
         // clear command works in any context.
@@ -472,6 +473,7 @@ async function serverHandle(request, response){
                 let app_state_key = APP_DATA + page_data.app_name;
                 let user_state_key = USER_APP_DATA + user_key + "|" + page_data.app_name;
                 if(cmd == "reset"){ // resets user
+                    page_data.cmd_out = "";
                     await db.set(user_state_key, undefined);
                 }
                 if(cmd == "exit"){

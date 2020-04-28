@@ -1,13 +1,17 @@
 
 module.exports = hanoiApp;
 
-const INIT_STATE = {turn: 0, towers: [[7,6,5,4,3,2,1],[],[]]};
+const INIT_STATE = {turn: 0, towers: [[5,4,3,2,1],[],[]]};
 const GREETING =
 `Tower of Hanoi Puzzle game
 ===========================`;
 const HELP_MSG =
-` To move a disc, type the origin and destination tower name.
- Example: a b`;
+` You are trying to move the tower,
+  to bring about the end of the world.
+ To move a disc, type the origin name,
+  and destination tower name.
+
+Example: a b`;
 
 
 function parseState(s){
@@ -59,7 +63,7 @@ function hanoiApp(args, puts, data){
         msg += "\n" + HELP_MSG;
         msg += "\n";
     }
-    else{
+    else if(args.length > 0){
         // throwing an error prevents any state change.
         if(args.length != 2){
             throw "You must type two tower names to move the disc."; }
@@ -73,10 +77,16 @@ function hanoiApp(args, puts, data){
         if(to.length && to[to.length - 1] < disc){
             throw "Cannot stack bigger disc on smaller disc."; }
         to.push(disc);
+        ++state.turn;
         if(isFinished(state)){
             msg += "\nTower Finished.";
-            msg += "\nThis is now the end of the world.";
-            msg += "\n\nType 'reset' to reset."; }
+            msg += "\nThe world is not ending.";
+            msg += "\nCongratulations, on the apocalypse.";
+            msg += "\n\nType 'reset' to reset.";
+            printState(state, puts);
+            puts(msg);
+            return {user_state: dumpState(state)};
+        }
     }
     puts(msg);
     printState(state, puts);

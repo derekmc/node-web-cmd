@@ -90,6 +90,7 @@ const {
 } = require("./const.js");
 
 loadApp('guess', './app/guess.js');
+loadApp('hanoi', './app/hanoi.js');
 loadCmd('config', './cmd/config.js');
 let {parseConfig, dumpConfig, DEFAULT_CONFIG} = require('./cmd/config.js');
 
@@ -465,8 +466,14 @@ async function serverHandle(request, response){
                 // when entering app, remove appname from args
                 args = args.slice(1);
                 page_data.app_state;
+                page_data.entering_app = true;
             }
             if(page_data.app_name.length){
+                let app_state_key = APP_DATA + page_data.app_name;
+                let user_state_key = USER_APP_DATA + user_key + "|" + page_data.app_name;
+                if(cmd == "reset"){ // resets user
+                    await db.set(user_state_key, undefined);
+                }
                 if(cmd == "exit"){
                     page_data.cmd_out = page_data.base_cmd_out;
                     page_data.cmd_out += "\n'" + page_data.app_name + "' terminated.";
@@ -479,26 +486,31 @@ async function serverHandle(request, response){
                     // TODO handle data_context config parameter.
                     // TODO handle app_context.
                     // TODO handle
-                    let app_state_key = APP_DATA + page_data.app_name;
-                    let user_state_key = USER_APP_DATA + user_key + "|" + page_data.app_name;
                     let app_keys = {
                         'app_state' : app_state_key,
                         'user_state' : user_state_key,
                     }
                     let data = await db.get(app_keys);
-                    let result = Apps[page_data.app_name](args, puts, data); let save_result_keys = {};
+                    data.entering_app = page_data.hasOwnProperty('entering_app')? page_data.entering_app : false;
+                    let result = null;
+                    try{
+                        result = Apps[page_data.app_name](args, puts, data);
+                    } catch(e) {
+                        puts("\"" + (e.hasOwnProperty('message')? e.message : e) + "\"");
+                    }
+                    if(result){
+                        let save_keys = {};
+                        let save_data = {}; // copy results we want to save, to save_data
+                        // Save whatever results were provided by the return value of the app.
+                        if(result.hasOwnProperty('user_state')){
+                            save_keys.user_state = user_state_key;
+                            save_data.user_state = result.user_state; }
+                        if(result.hasOwnProperty('app_state')){
+                            save_keys.app_state = app_state_key; 
+                            save_data.app_state = result.app_state; }
 
-                    let save_keys = {};
-                    let save_data = {}; // copy results we want to save, to save_data
-                    // Save whatever results were provided by the return value of the app.
-                    if(result.hasOwnProperty('user_state')){
-                        save_keys.user_state = user_state_key;
-                        save_data.user_state = result.user_state; }
-                    if(result.hasOwnProperty('app_state')){
-                        save_keys.app_state = app_state_key; 
-                        save_data.app_state = result.app_state; }
-
-                    await db.set(save_keys, save_data);
+                        await db.set(save_keys, save_data);
+                    }
                 }
             }
             else if(cmd in Commands){

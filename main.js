@@ -1,8 +1,57 @@
+// 
+// main.js
+//
+//  Use for building custom scientific, statistical, and accounting tools,
+//  that can be accessed and used over a SaaS online interface.
+//
+// This is the main file for node-web-cmd, which supports writing
+// commandline tools that are accessed from a browser interface,
+// over the network, and are rendered on the server.
+//
+// Node.js was chosen for two reasons: it provides modern tools
+// and because javascript is a well known language.
+//
+// There are three supported tools that developers may create
+// by implementing a single function:
+//   * Apps
+//   * User Apps
+//   * Commands - commands can manipulate user_logins and user_config.
+// 
+// Each type of function accepts 3 arguments:
+//   * args: the command line arguments, including the name of the tool.
+//   * puts: use this to write to standard out.
+//   * data: additional data unique to each tool.
+//
+// Here are the data arguments that are provided to each respective tool type:
+//
+// App 'data' arguments ====
+//  user_key: the session_cookie or user_id, depending on whether the user is logged in.
+//  app_state: the state for a particular app. if it is a "User App", it wraps 'user_states'.
+//
+// User App 'data' arguments ====
+//  user_state:
+//    user apps are called from a wrapper around normal apps, that
+//    only passes 'user_state' variable, from the 'user_states' property
+//    of a normal App's 'app_state'.  The 'user_states' lookup key,
+//    called 'user_key', is 'user_id' if they are logged in, and 'session_cookie'
+//    otherwise.
+//
+// Command 'data' arguments ====
+//    user_info:
+//       null if not logged in, otherwise {user_id, user_name}.
+//       To create a new user, set this value to {user_name, password_salt, password_hash, password_hash_func}.
+//    user_config: the user's configuration for the terminal
+//    (TODO) session_config: the configuration is always based on the session.
+//    
+//  
+//  
+
+// Command 'data' arguments
 
 let http = require('http');
 let fs = require('fs');
 let qs = require('querystring');
-let db = require('./db.js');
+let db = require('./db.js').promiseAPI;
 let template = require('lodash')._.template;
 let HelpMessages = {};
 let Commands = {};
@@ -12,28 +61,58 @@ let PORT = 8000;
 if(process.argv.length >= 3){
     PORT = process.argv[2]; }
 
+function Default(value, _default){
+    if(value === null || value === undefined) return _default;
+    return value;
+}
+
 const DB_FILE = "webapp_data.json";
-const SAVE_INTERVAL = 10*1000;
 const VERBOSE = false;
-const PASSWORD_FIELD_PREFIX = "cmd_password_input_";
-const APP_DATA = "app_data|";
+
 // map of session_cookie to user_ids.  Guest sessions have empty string id: "".
 // if it's a guest session, store the app user_data by session_cookie, and not user_id.
-const USER_SESSIONS = "user_sessions";
-const USER_INFO = "user_info"; // map of user_ids, to salt, password_hash, etc.
-const USER_CONFIGS = "user_configs";
-const SESSION_COOKIE_LEN = 20;
-const USER_ID_LEN = 10;
-const SESSION_COOKIE_NAME = "SESSION_COOKIE";
+const {
+    USERS,
+    SAVE_INTERVAL,
+    PASSWORD_FIELD_PREFIX,
+    APP_DATA,
+    USER_CONFIGS,
+    USER_LOGINS,
+    USER_APP_DATA,
+    USER_INFOS,
+    COOKIE,
+    SESSION_COOKIE_LEN,
+    SESSION_COOKIE_NAME,
+    USER_ID_LEN,
+    USER_SESSIONS,
+    PASSWORD_MINLENGTH,
+    GUEST_ID,
+} = require("./const.js");
 
-loadUserApp('guess', './app/guess.js');
+loadApp('guess', './app/guess.js');
 loadCmd('config', './cmd/config.js');
 let {parseConfig, dumpConfig, DEFAULT_CONFIG} = require('./cmd/config.js');
 
-db.load(DB_FILE, function(){
-   if(VERBOSE) console.log('database loaded: ' + DB_FILE); });
 
-setInterval(()=>db.save(DB_FILE, ()=>{if(VERBOSE) console.log('database saved: ' + DB_FILE)}), SAVE_INTERVAL);
+// load database
+(async ()=>{
+    try{
+        await db.load(DB_FILE); 
+        if(VERBOSE) console.log('database loaded: ' + DB_FILE);
+    } catch(err) {
+        console.error("error loading database file", err);
+    }
+})()
+
+// save database on intervals
+setInterval(async ()=>{
+    try{ 
+        await db.save(DB_FILE);
+        if(VERBOSE) console.log('database saved: ' + DB_FILE);
+    } catch(err) {
+        console.err("error saving database file", err);
+    }
+}, SAVE_INTERVAL);
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
 const NEW_CONTEXT = "==NEW CONTEXT==";
@@ -76,48 +155,17 @@ function loadCmd(cmdname, filename){
     HelpMessages[cmdname] = cmd_module.help;
     Commands[cmdname] = cmd_module.command;
 }
-// TODO normal apps need to be wrapped special to use the
+
+// apps have access to user_state and app_state, and can save either one.
 // callback convention.
 function loadApp(appname, filename){
     let app = require(filename);
-    // app(state, args, puts, child_name, child_state) TODO
+    // app(args, puts, data: {user_state, app_state}) TODO
     Apps[appname] = app;
 }
 
-// 
-
-// wrap the app to keep per user/ per session state.
-function loadUserApp(appname, filename){
-    app = require(filename);
-    Apps[appname] = function(args, puts, data){
-        let state = data.app_state;
-        let user_key = data.user_key;
-        if(state == null || !state.user_states){
-            state = {user_states:{}};
-        }
-        // todo wrap in another datastructure.
-        let user_state = (user_key in state.user_states)? state.user_states[user_key] : null;
-
-        user_state = app(args, puts, {user_state: user_state});
-        state.user_states[user_key] = user_state;
-        return state;
-    }
-}
-
-// TODO only sudo apps have access to password input.
-// a db app is just an app, but with access to a global state object,
-// and not per session state.
-// TODO should use callbacks.
-// function loadDataApp(db, /*filename,*/ appname){
-//    let app = require(filename);
-//    Apps[appname] = function(args, puts, state, app_context){
-//        return app(args, puts, state, db, app_context);
-//    }
-//    // dataapp(db, args, puts)
-//}
-// console.log('apps', Apps)
-
 Aliases.dark = 'config bg 000 fg fff';
+Aliases.retro = 'config bg 000 fg 6fa';
 Aliases.light = 'config bg fff fg 000';
 Aliases.small = 'config rows 13 cols 25';
 Aliases.medium = 'config rows 19 cols 54';
@@ -127,7 +175,29 @@ Aliases.tall = 'config rows 33 cols 54';
 
 HelpMessages.help = "Show help for a command. Example: \"help config\".";
 
-Commands.help = function(args, puts, state){
+/*
+Commands.newuser = function(args, puts, data){
+    let passwords = data.passwords;
+    let user_info = data.user_info;
+
+    if(passwords.length != 2){
+        puts("Error: newuser requires 2 passwords: password and confirm.");
+        return; }
+    if(passwords[0] != passwords[1]){
+        puts("Error: password mismatch.");
+        return; }
+    if(passwords[0].length < PASSWORD_MINLENGTH){
+        puts("Error: password too short.");
+        break;
+    }
+    // to make a new user, add the username and password salt to the table user_infos
+
+}
+*/
+Commands.account = function(args, puts, data){
+    //args.
+}
+Commands.help = function(args, puts, data){
     if(args.length == 1){
         let cmdlist = [];
         let applist = getKeys(Apps);
@@ -152,7 +222,8 @@ Commands.help = function(args, puts, state){
             if(row.length) puts(" " + row.join(', '));
         }
         puts("Type \"help <command>\" for command help.");
-        return; }
+        return;
+    }
     //args.push('help'); }
     for(var i=1; i<args.length; ++i){
         let cmd = args[i];
@@ -202,8 +273,48 @@ function dumpHist(hist){
     return result_array.join(NEW_CONTEXT) + "\n";
 }
 
-let server = http.createServer(function(request, response){
-    let data  = {
+function parseCookies(str){
+    if(!str) return {};
+    let result = {};
+    let parts = str.split(/\;\s*/g);
+    for(let i=0; i<parts.length; ++i){
+        let part = parts[i];
+        let index = part.indexOf("=");
+        if(index > 0){
+            let key = part.substr(0, index).trim();
+            let value = part.substr(index+1).trim();
+            result[key] = value;
+        }
+    }
+    return result;
+}
+
+
+// Database data schema
+// difference between guest and a user? A user has login info.
+// sessions|session_cookie: user_id
+// user_config|user_id: config
+// user_sessions|user_id: [session_cookies]
+// user_logins|user_id: {username, password, salt}
+// app_data|app_name: { user_states : state } 
+//   
+// user_sessions
+// user_configs
+
+// Main server function involves the following steps:
+//  Step 0 - Initialize headers, page_data.
+//  Step 1 - Get session_cookie from request, and user_id from database.
+//  Step 2 - Generate session_cookie if not set.
+//  Step 3 - Set user_key to the user_id, or to the session_cookie if a guest session.
+//  Step 4 - Get cmd_data {user_config} from database.
+
+let server = http.createServer(serverHandle);
+
+async function serverHandle(request, response){
+
+    // Step 0 - Initialize headers, page_data
+    let headers = {"Content-Type": "text/html"};
+    let page_data = {
         "title": "cmd",
         "config" : parseConfig(DEFAULT_CONFIG),
         "cmd_out" : DEFAULT_CMDOUT,
@@ -212,222 +323,238 @@ let server = http.createServer(function(request, response){
         "app_name" : "",
         "app_state" : "",
         "session_cookie": "",
+        "user_id": GUEST_ID,
+        "user_key": "",
     }
-    let headers = {"Content-Type": "text/html"};
 
     
-    if(request.headers.hasOwnProperty('cookie')){
-        let cookies = request.headers['cookie']
-        let parts = cookies.split(/\;\s*/g);
-        for(let i=0; i<parts.length; ++i){
-            let part = parts[i];
-            let index = part.indexOf("=");
-            if(index > 0){
-                let key = part.substr(0, index).trim();
-                let value = part.substr(index+1).trim();
-                if(key == SESSION_COOKIE_NAME){
-                   if(alphanum_regex.test(value)){
-                      data.session_cookie = value; }}
-            }
-        }
+    // Step 1 - Get session_cookie from request, and user_id from database.
+    let request_cookies = parseCookies(request.headers['cookie']);
+    if(request_cookies.hasOwnProperty(SESSION_COOKIE_NAME)){
+        page_data.session_cookie = request_cookies[SESSION_COOKIE_NAME];
+        page_data.user_id = await db.get(USER_SESSIONS + page_data.session_cookie);
     }
-    let keys = { user_configs: USER_CONFIGS,
-                 user_sessions: USER_SESSIONS };
-    db.get(keys, function(result){
-        let user_configs = result.user_configs;
-        let user_sessions = result.user_sessions;
-        if(data.session_cookie == ""){
-            data.session_cookie = randstr(ALPHANUMS, SESSION_COOKIE_LEN);
-            if(result.user_sessions == undefined){
-                result.user_sessions = {};
-                result.user_sessions[data.session_cookie] =  ""; }
-            db.set({user_sessions:USER_SESSIONS}, result); 
-            headers['Set-Cookie'] = SESSION_COOKIE_NAME + "=" + data.session_cookie + ";";
-        }
 
-        if(user_sessions == undefined){
-            user_sessions = result.user_sessions = {}; }
-        if(user_configs == undefined){
-            user_configs = result.user_configs = {}; }
+    // Step 2 - Generate session_cookie if it does not exist.
+    if(page_data.session_cookie == ""){
+        page_data.session_cookie = await db.genId({
+            prefix: COOKIE,
+            len: SESSION_COOKIE_LEN,
+            init: page_data.user_id,
+        })
+        headers['Set-Cookie'] = SESSION_COOKIE_NAME + "=" + page_data.session_cookie + ";";
+    }
 
-        // session_cookie is user_key if user is not logged in.
-        let user_key = null;
-        if(!(data.session_cookie in user_sessions) || user_sessions[data.session_cookie] == ""){
-            user_key = data.session_cookie;
-            user_sessions[user_key] = ""; }
+    // Step 3 - Set user_key to user_id, or to session_cookie if guest session.
+    let user_key = page_data.user_id;
+    if(user_key == undefined){
+        user_key = page_data.user_id = GUEST_ID; }
+    if(user_key == GUEST_ID){
+        user_key = page_data.session_cookie; }
+    page_data.user_key = user_key;
+    // console.log('user_key', user_key);
+
+    // Step 4 - Get cmd_data {user_config, user_info} from database.
+    let cmd_keys = { user_config: USER_CONFIGS + user_key, };
+    let cmd_data = await db.get(cmd_keys);
+    // console.log('cmd_data', cmd_data);
+    // cmd_data.user_info = Default(cmd_data.user_info, {});
+    cmd_data.user_config = Default(parseConfig(cmd_data.user_config), parseConfig(DEFAULT_CONFIG));
+    for(let key in cmd_data.user_config){
+        page_data.config[key] = cmd_data.user_config[key];
+    }
+    // TODO save user_config after command processing.
+    // console.log('page_data.config', page_data.config);
+
+    // Step 5 - handle GET or POST
+    if(request.method == "GET"){
+        response.writeHead(200, headers);
+        cmdPage(page_data);
+    }
+    if(request.method == "POST"){
+        let requestBody = '';
+        request.on('data', function(_data){
+            requestBody += _data;
+            if(requestBody.length > 1e7) {
+                response.writeHead(413, 'Request Entity Too Large', {'Content-Type': 'text/html'});
+                response.end('<!doctype html><html><head><title>413</title></head><body>413: Request Entity Too Large</body></html>');
+            }
+        });
+        request.on('end', async function(){
+            try{
+                let formData = qs.parse(requestBody);
+
+                // santize all form fields for html characters.
+                for(let k in formData){
+                    formData[k] = escapeHtml(formData[k]); }
+
+                let cmd_text = "";
+                // handle form data to modify local variables and 
+                page_data.passwords = [];
+                for(var i=1; true; ++i){
+                    let field_name = PASSWORD_FIELD_PREFIX + i;
+                    if(!formData[field_name]){
+                        break; }
+                    page_data.passwords.push(formData[field_name]);
+                }
+                // console.log('remove this debugging only!!! Passwords: ' + page_data.passwords.join(', '));
+                // session token must match the allowed characters, but could otherwise be forged.
+                if(formData.cmd_out){
+                    page_data.cmd_out = formData.cmd_out;
+                }
+                if(formData.base_cmd_out){
+                    page_data.base_cmd_out = formData.base_cmd_out;
+                }
+                if(formData.cmd_hist){
+                    page_data.cmd_hist = parseHist(formData.cmd_hist);
+                }
+                // TODO do we want an app stack?
+                // when an app in the app stack returns,
+                // the child app_name and child app_state
+                // are passed as extra parameters to the app.
+                if(formData.app_name){
+                    page_data.app_name = formData.app_name;
+                }
+                if(formData.cmd_text){
+                    page_data.cmd_text = formData.cmd_text;
+                    if(page_data.cmd_text.length){
+                        if(!page_data.cmd_hist){
+                            page_data.cmd_hist = [[]]; }
+                        if(!page_data.cmd_hist.length){
+                            page_data.cmd_hist.push([]); }
+                        let last_hist_item = lastHistItem(page_data.cmd_hist);
+                        if(page_data.cmd_text != last_hist_item){
+                            page_data.cmd_hist[page_data.cmd_hist.length - 1].push(page_data.cmd_text); }
+                    }
+                }
+
+                let puts = function(s){ page_data.cmd_out += "\n" + s; }
+                await handleCommand(page_data.cmd_text, puts, page_data);
+                cmdPage(page_data);
+            }
+            catch(error){
+                errorResponse(error);
+            }
+        });
+    }
+    function errorResponse(error){
+        console.error('Error handling request.', error);
+        response.writeHead(500, {"Content-Type": "text/html"});
+        let html = "<h1>Unhandled error.</h1>";
+        response.end(html);
+    }
+    async function handleCommand(cmd_text, puts, page_data){
+        if(!cmd_text) cmd_text = "";
+        puts("> " + cmd_text);
+        // aliases require full match
+        if(cmd_text in Aliases){
+            cmd_text = Aliases[cmd_text]; }
+        let args = cmd_text.split(/\s+/);
+        if(!args.length) return;
+        let cmd = args[0];
+
+        // clear command works in any context.
+        if(cmd == 'clear'){
+            page_data.cmd_out = ""; }
         else{
-            user_key = user_sessions[data.session_cookie]; }
-
-        if(user_key in user_configs){
-            data.config = parseConfig(user_configs[user_key]); }
-        else{
-            user_configs[user_key] = dumpConfig(data.config); }
-
-
-        if(request.method == "GET"){
-            response.writeHead(200, headers);
-            cmdPage(data);
-        }
-        if(request.method == "POST"){
-            let requestBody = '';
-            request.on('data', function(_data){
-                requestBody += _data;
-                if(requestBody.length > 1e7) {
-                    response.writeHead(413, 'Request Entity Too Large', {'Content-Type': 'text/html'});
-                    response.end('<!doctype html><html><head><title>413</title></head><body>413: Request Entity Too Large</body></html>');
-                }
-            });
-            request.on('end', function(){
-                try{
-                    let formData = qs.parse(requestBody);
-
-                    // santize all form fields for html characters.
-                    for(let k in formData){
-                        formData[k] = escapeHtml(formData[k]); }
-
-                    let cmd_text = "";
-                    // handle form data to modify local variables and 
-                    data.passwords = [];
-                    for(var i=1; true; ++i){
-                        let field_name = PASSWORD_FIELD_PREFIX + i;
-                        if(!formData[field_name]){
-                            break; }
-                        data.passwords.push(formData[field_name]);
-                    }
-                    // console.log('remove this debugging only!!! Passwords: ' + data.passwords.join(', '));
-                    // session token must match the allowed characters, but could otherwise be forged.
-                    if(formData.cmd_out){
-                        data.cmd_out = formData.cmd_out;
-                    }
-                    if(formData.base_cmd_out){
-                        data.base_cmd_out = formData.base_cmd_out;
-                    }
-                    if(formData.cmd_hist){
-                        data.cmd_hist = parseHist(formData.cmd_hist);
-                    }
-                    // TODO do we want an app stack?
-                    // when an app in the app stack returns,
-                    // the child app_name and child app_state
-                    // are passed as extra parameters to the app.
-                    if(formData.app_name){
-                        data.app_name = formData.app_name;
-                    }
-                    if(formData.cmd_text){
-                        data.cmd_text = formData.cmd_text;
-                        if(data.cmd_text.length){
-                            if(!data.cmd_hist){
-                                data.cmd_hist = [[]]; }
-                            if(!data.cmd_hist.length){
-                                data.cmd_hist.push([]); }
-                            let last_hist_item = lastHistItem(data.cmd_hist);
-                            if(data.cmd_text != last_hist_item){
-                                data.cmd_hist[data.cmd_hist.length - 1].push(data.cmd_text); }
-                        }
-                    }
-
-                    let puts = function(s){ data.cmd_out += "\n" + s; }
-                    handleCommand(data, data.cmd_text, puts);
-                    cmdPage(data);
-                }
-                catch(error){
-                    console.error('Error handling request.', error);
-                    response.writeHead(500, {"Content-Type": "text/html"});
-                    let html = "<h1>Unhandled error.</h1>";
-                    response.end(html);
-                }
-            });
-        }
-        function handleCommand(data, cmd_text, puts){
-            if(!cmd_text) cmd_text = "";
-            puts("> " + cmd_text);
-            // aliases require full match
-            if(cmd_text in Aliases){
-                cmd_text = Aliases[cmd_text]; }
-            let args = cmd_text.split(/\s+/);
-            if(!args.length) return;
-            let cmd = args[0];
-
-            // clear command works in any context.
-            if(cmd == 'clear'){
-                data.cmd_out = ""; }
-            else{
-                if(data.app_name == "" && (cmd in Apps)){
-                    data.base_cmd_out = data.cmd_out;
-                    data.cmd_out = `'${cmd}' started. Type 'exit' to exit.\n`;
-                    data.app_name = cmd;
-                    data.cmd_hist.push([]); // add a new layer of history.
-                    // when entering app, remove appname from args
-                    args = args.slice(1);
-                    data.app_state; }
-                if(data.app_name.length){
-                    if(cmd == "exit"){
-                        data.cmd_out = data.base_cmd_out;
-                        data.cmd_out += "\n'" + data.app_name + "' terminated.";
-                        data.base_cmd_out = "";
-                        data.app_state = "";
-                        // console.log('cmd_hist', data.cmd_hist);
-                        data.cmd_hist.pop(); // remove a layer of history.
-                        data.app_name = ""; }
-                    else{
-                        // TODO handle data_context config parameter.
-                        // TODO handle app_context.
-                        // TODO handle
-                        let app_data_key = APP_DATA + data.app_name;
-                        db.get(app_data_key,
-                            function(app_state){
-                                keys.app_state = app_data_key;
-                                result.app_state = Apps[data.app_name](args, puts,
-                                    {app_state: app_state,
-                                     passwords: data.passwords,
-                                     user_key: user_key});
-                                db.set(keys, result); })
-                    }
-                }
-                else if(cmd in Commands){
-                    // data.app_name = "test app_name";
-                    Commands[cmd](args, _puts, data);
-                    result.user_configs[user_key] = dumpConfig(data.config);
-                    db.set(keys, result); }
+            if(page_data.app_name == "" && (cmd in Apps)){
+                page_data.base_cmd_out = page_data.cmd_out;
+                page_data.cmd_out = `'${cmd}' started. Type 'exit' to exit.\n`;
+                page_data.app_name = cmd;
+                page_data.cmd_hist.push([]); // add a new layer of history.
+                // when entering app, remove appname from args
+                args = args.slice(1);
+                page_data.app_state;
+            }
+            if(page_data.app_name.length){
+                if(cmd == "exit"){
+                    page_data.cmd_out = page_data.base_cmd_out;
+                    page_data.cmd_out += "\n'" + page_data.app_name + "' terminated.";
+                    page_data.base_cmd_out = "";
+                    page_data.app_state = "";
+                    // console.log('cmd_hist', page_data.cmd_hist);
+                    page_data.cmd_hist.pop(); // remove a layer of history.
+                    page_data.app_name = ""; }
                 else{
-                    puts(" Unknown command: '" + cmd + "'"); }}
-            // wrap puts to start all lines with a space.
-            function _puts(s){ puts(' ' + s); }
-        }
-        // closure for rendering the page.
-        function cmdPage(data){
-            let template_data = {};
+                    // TODO handle data_context config parameter.
+                    // TODO handle app_context.
+                    // TODO handle
+                    let app_state_key = APP_DATA + page_data.app_name;
+                    let user_state_key = USER_APP_DATA + user_key + "|" + page_data.app_name;
+                    let app_keys = {
+                        'app_state' : app_state_key,
+                        'user_state' : user_state_key,
+                    }
+                    let data = await db.get(app_keys);
+                    let result = Apps[page_data.app_name](args, puts, data); let save_result_keys = {};
 
-            template_data.title = data.title;
+                    let save_keys = {};
+                    let save_data = {}; // copy results we want to save, to save_data
+                    // Save whatever results were provided by the return value of the app.
+                    if(result.hasOwnProperty('user_state')){
+                        save_keys.user_state = user_state_key;
+                        save_data.user_state = result.user_state; }
+                    if(result.hasOwnProperty('app_state')){
+                        save_keys.app_state = app_state_key; 
+                        save_data.app_state = result.app_state; }
 
-            let cmd_list = [];
-            cmd_list = cmd_list.concat(getKeys(Commands));
-            cmd_list = cmd_list.concat(getKeys(Aliases));
-            cmd_list = cmd_list.concat(getKeys(Apps));
-            template_data.cmd_list = cmd_list.join(' ');
-            let cmd_out_lines = data.cmd_out.split("\n");
-            if(cmd_out_lines.length >= data.config.rows){
-                cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - data.config.rows + 1);
+                    await db.set(save_keys, save_data);
+                }
             }
-            template_data.cmd_out = cmd_out_lines.join("\n");
-            template_data.base_cmd_out = data.base_cmd_out;
-            // console.log('cmd_hist', data.cmd_hist);
-            template_data.cmd_hist = dumpHist(data.cmd_hist);
-            template_data.config = dumpConfig(data.config);
-            template_data.app_name = data.app_name;
-            template_data.app_state = data.app_state;
-            template_data.session_cookie = data.session_cookie;
-
-            // add config vars to rendering data context.
-            for(let key in data.config){
-                template_data[key] = data.config[key];
+            else if(cmd in Commands){
+                // page_data.app_name = "test app_name";
+                Commands[cmd](args, _puts, cmd_data);
+                for(var k in cmd_data.user_config){
+                    page_data.config[k] = cmd_data.user_config[k]; }
+                // console.log('page config, cmd config:', page_data.config, cmd_data.config);
+                await db.set(USER_CONFIGS + user_key, dumpConfig(page_data.config));
+                //await db.set(USER_INFOS + , dumpConfig(page_data.config));
+                //server_data.user_configs[user_key] = dumpConfig(page_data.config);
+                //server_data.user_infos[user_key] = server_data.user_info;
+                //db.set(server_keys, server_data);
             }
-
-            response.writeHead(200, headers);
-            let html = cmd_page(template_data);
-            response.end(html);
+            else{
+                puts(" Unknown command: '" + cmd + "'");
+            }
         }
-    })
-})
+        // wrap puts to start all lines with a space.
+        function _puts(s){ puts(' ' + s); }
+    }
+    // closure for rendering the page.
+    function cmdPage(page_data){
+        let template_data = {};
+
+        template_data.title = page_data.title;
+
+        let cmd_list = [];
+        cmd_list = cmd_list.concat(getKeys(Commands));
+        cmd_list = cmd_list.concat(getKeys(Aliases));
+        cmd_list = cmd_list.concat(getKeys(Apps));
+        template_data.cmd_list = cmd_list.join(' ');
+        let cmd_out_lines = page_data.cmd_out.split("\n");
+        if(cmd_out_lines.length >= page_data.config.rows){
+            cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - page_data.config.rows + 1);
+        }
+        template_data.cmd_out = cmd_out_lines.join("\n");
+        template_data.base_cmd_out = page_data.base_cmd_out;
+        // console.log('cmd_hist', data.cmd_hist);
+        template_data.cmd_hist = dumpHist(page_data.cmd_hist);
+        template_data.config = dumpConfig(page_data.config);
+        template_data.app_name = page_data.app_name;
+        template_data.app_state = page_data.app_state;
+        // template_data.session_cookie = page_data.session_cookie;
+
+        // add config vars to rendering data context.
+        for(let key in page_data.config){
+            template_data[key] = page_data.config[key];
+        }
+
+        //console.log('template_data', template_data);
+        response.writeHead(200, headers);
+        let html = cmd_page(template_data);
+        response.end(html);
+    }
+}
 
 server.listen(PORT);
 

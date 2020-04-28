@@ -5,6 +5,11 @@ const ALPHANUMS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012345678
 const DEFAULT_LEN = 4;
 const DEFAULT_TRIES = 4;
 
+
+// 'next' callbacks use the following format:
+//    next(err, result)
+// 
+
 let __data = {};
 // gets 'ids' from all keys matching the prefix.
 exports.getIds = function(prefix, next){
@@ -13,6 +18,9 @@ exports.getIds = function(prefix, next){
         if(k.indexOf(prefix) == 0){
             result.push(k.substr(prefix.length)); }}
     next(undefined, result);
+}
+exports.dump = function(next){
+    next(undefined, JSON.stringify(__data)); 
 }
 exports.save = function(filename, next){
     fs.writeFile(filename? filename : DEFAULT_DB_FILE,
@@ -49,13 +57,13 @@ exports.get = function(key, next){
     else{
         result = __data[key];
     }
-    return next(result);
+    return next(undefined, result);
 }
 
 // setNew forces it to be a newkey.
 exports.set = function(key, value, next){
     if(!next) next = function(){}
-    if(typeof next != 'function') throw new Error('no next func');
+    if(typeof next != 'function') throw new Error('\'next\' was not a function.');
     let keytype = typeof key;
 
     if(keytype == "object"){
@@ -97,7 +105,7 @@ exports.set = function(key, value, next){
         else{
             __data[key] = value; }
     }
-    return next();
+    return next(undefined);
 }
 
 function randstr(chars, len){
@@ -111,30 +119,89 @@ function randstr(chars, len){
 
 // generates new id according to parameters,
 // sets the value with the prefix, and passes id to next.
-// optional: idRef is a unique lookup reference to the id, must be empty.
+/// args: {
+//    prefix, // the key's prefix.
+//    chars, // the legal characters for the key.
+//    len, // the length of the key to generate
+//    tries, // how many times to repeat attempts.
+//    init, // the initialization function.
+// }
 exports.genId = function(args, next){
     if(!next || (typeof next != 'function')) throw new Error('no next func');
     let prefix = args.prefix? args.prefix : "";
-    let idRef = args.idRef; // make sure idRef is empty if provided.
-    let refOnly = args.refOnly; 
     let chars = args.chars? args.chars : ALPHANUMS;
     let len = args.len? args.len : DEFAULT_LEN;
     let tries = args.tries? args.tries : DEFAULT_TRIES;
     let init = ('init' in args)? args.init : null;
-    if(idRef && (idRef in __data)){
-        console.log('idRef', idRef);
-        next(`idRef '${idRef}' already exists.`, __data[idRef]);
-        return; }
     for(let i=0; i<tries; ++i){
         let id = randstr(chars, len);
         let k = prefix + id;
         if(!(k in __data)){
-            if(!refOnly){ __data[k] = init; }
-            if(idRef){ __data[idRef] = id; }
+            __data[k] = init;
             next(undefined, id);
             return;
         }
     }
     next('Could not find available key', null);
     return;
+}
+
+exports.promiseAPI = {};
+exports.promiseAPI.getIds = async (prefix)=> {
+    return new Promise((resolve, reject) => {
+        exports.getIds(prefix, (err, result)=> {
+            if(err) reject(err);
+            else resolve(result);
+        })
+    })
+}
+exports.promiseAPI.save = async (filename) => {
+    return new Promise((resolve, reject) => {
+        exports.save(filename, (err)=>{
+            if(err) reject(err);
+            else resolve();
+        })
+    })
+}
+
+exports.promiseAPI.load = async (filename) => {
+    return new Promise((resolve, reject) => {
+        exports.load(filename, (err)=>{
+            if(err) reject(err);
+            else resolve();
+        })
+    })
+}
+exports.promiseAPI.dump = async () => {
+    return new Promise((resolve, reject) => {
+        exports.dump((s)=>{
+            resolve(s);
+        })
+    })
+}
+exports.promiseAPI.get = async (key) => {
+    return new Promise((resolve, reject) => {
+        exports.get(key, (err, value) => {
+            if(err) reject(err);
+            else resolve(value);
+        })
+    })
+}
+
+exports.promiseAPI.set = async (key, value) => {
+    return new Promise((resolve, reject) => {
+        exports.set(key, value, (err) => {
+            if(err) reject(err);
+            else resolve();
+        })
+    })
+}
+
+exports.promiseAPI.genId = async (args) => {
+    return new Promise((resolve, reject) => {
+        exports.genId(args, (err, id) => {
+            if(err) reject(err);
+            else resolve(id);
+        })
+    })
 }

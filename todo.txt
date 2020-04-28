@@ -1,5 +1,4 @@
 list potential security concerns csrf, etc. -- 20.03.17 14:14
-make a command that uses a database. -- 20.02.17 22:23
 send command list to client, for features like tab completion -- 20.02.15 08:30
 all password commands have a * prefix -- 20.02.13 05:16
 expandable input for password input -- 20.02.13 05:13
@@ -16,3 +15,4 @@ db should wrap a redis database, instead of just dumping json to a file. -- 20.0
 ## command callbacks -- 20.02.07 21:12 | 20.02.13 04:40 =
 ## exit button to apps -- 20.03.08 12:32 | 20.03.08 12:40 =
 ## password field should not be on form until open password input button is clicked. Right now it is hidden -- 20.03.08 10:57 | 20.03.08 12:40 =
+## make a command that uses a database. -- 20.02.17 22:23 | 20.03.22 22:35 =

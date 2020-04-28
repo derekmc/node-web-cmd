@@ -46,5 +46,5 @@ function guessApp(args, puts, data){
         user_state = [max, n, guesses, max_guesses].join(', ');
     }
     puts(msg);
-    return user_state;
+    return {user_state: user_state};
 }

@@ -1,6 +1,6 @@
 
 const alphanum_regex = /^[A-Za-z0-9 ]*$/;
-const DEFAULT_CONFIG = "rows 19 cols 54 fg 000 bg fff";
+const DEFAULT_CONFIG = "rows 19 cols 54 fg 6fa bg 000";
 exports.DEFAULT_CONFIG = DEFAULT_CONFIG;
 // config command.
 exports.help = 
@@ -28,6 +28,7 @@ function mergeMap(a, b){
 // "property1 value1 property2 value2"
 exports.parseConfig = parseConfig;
 function parseConfig(config_str){
+    if(!config_str) return {};
     let array = config_str.split(/\s+/);
     let result = {};
     for(let i=0; i<array.length - 1; i += 2){
@@ -41,6 +42,7 @@ function parseConfig(config_str){
 
 exports.dumpConfig = dumpConfig;
 function dumpConfig(config){
+    if((typeof config) != "object") throw new Error("config was not an object.");
     let result_array = [];
     for(let k in config){
         let value = config[k];
@@ -55,8 +57,8 @@ function dumpConfig(config){
 exports.command = function(args, puts, data){
     if(args.length == 1){
         let index = 0;
-        for(var k in data.config){
-            puts(k + " " + data.config[k]); }
+        for(var k in data.user_config){
+            puts(k + " " + data.user_config[k]); }
         return; }
     let config_str = args.slice(1).join(" ");
     if(!alphanum_regex.test(config_str)){
@@ -70,7 +72,7 @@ exports.command = function(args, puts, data){
             filtered[k] = new_config[k]; }
         else{
             puts("Invalid config property '" + k + "'"); }}
-    data.config = mergeMap(data.config, filtered);
+    data.user_config = mergeMap(data.user_config, filtered);
     puts("config changes:");
     for(let k in filtered){
         puts(" " + k + " " + filtered[k]); }

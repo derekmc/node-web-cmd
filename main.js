@@ -175,6 +175,7 @@ Aliases.tall = 'config rows 33 cols 54';
 
 HelpMessages.help = "Show help for a command. Example: \"help config\".";
 
+/*
 Commands.newuser = function(args, puts, data){
     let passwords = data.passwords;
     let user_info = data.user_info;
@@ -192,7 +193,8 @@ Commands.newuser = function(args, puts, data){
     // to make a new user, add the username and password salt to the table user_infos
 
 }
-Commands.useraccount = function(args, puts, data){
+*/
+Commands.account = function(args, puts, data){
     //args.
 }
 Commands.help = function(args, puts, data){

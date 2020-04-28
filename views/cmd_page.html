@@ -12,7 +12,7 @@
         margin-bottom: 4px;
         outline-color: invert;
       }
-      input[type=text], textarea, button{
+      input[type=password], input[type=text], textarea, button{
         outline: blue;
         border: 1px solid #<%= fg %>;
       }
@@ -35,13 +35,16 @@
       <input type="hidden" name="app_name" id="app_name" value="<%= app_name %>" />
       <input type="hidden" name="config" id="config" value="<%= config %>" />
       <br>
-      <%= app_name %>
-      <input type="text" name="cmd_text" id="cmd_text"
-             size="<% print(cols - 5 - (app_name.length? app_name.length + 8 : 0)); %>"
-             autofocus="" autocomplete="off" value="" placeholder="Enter Command"/>
-      <button type="submit">Run</button>
-      <% if(app_name.length > 0) { %>
-        <button type="button" onclick="cmd_text.value='exit'; document.forms['cmd_form'].submit()">Exit</button>
+      <% if(app_name.length == 0) { %>
+        <input type="text" name="cmd_text" id="cmd_text"
+               size="<% print(cols - 9); %>"
+               autofocus="" autocomplete="off" value="" placeholder="Enter Command"/>
+        <button type="submit">Run</button>
+      <% } else { %>
+        <input type="text" name="cmd_text" id="cmd_text"
+               size="<% print(cols - 9); %>"
+               autofocus="" autocomplete="off" value="" placeholder="<%= app_name %> "/>
+        <button type="submit" title="Run Command" >Run</button>
       <% } %>
       <span id="passwords_div" class="hide_passwords">
         <span id="passwords_span_1">
@@ -52,6 +55,13 @@
         </span>
       </span>
     </form>
+    <% if(app_name.length > 0) { %>
+      <div>
+        <button type="button" title="Exit App"
+          onclick="cmd_text.value='exit'; document.forms['cmd_form'].submit()">X</button>
+        App: <%= app_name %>
+      </div>
+    <% } %>
     <!-- a href="https://github.com/derekmc/node-web-cmd/">Github</a-->
     <script>
       var cmd_list = "<%= cmd_list %>".split(' ');
@@ -95,7 +105,7 @@
       // var HIDE_PASSWORDS = "hide_passwords";
       var PASSWORD_ID_REGEX = /\{\{password_id\}\}/g;
       var password_inputs_html = '<br/>' + 
-          '<input type="password" size="<% print(cols - 5); %>" name="cmd_password_input_{{password_id}}" id="cmd_password_input_{{password_id}}"' + 
+          '<input type="password" size="<% print(cols - 9); %>" name="cmd_password_input_{{password_id}}" id="cmd_password_input_{{password_id}}"' + 
           '       autocomplete="off" value="" placeholder="Password #{{password_id}}"/>' + 
           ' <button type="button" id="remove_password_button_{{password_id}}" title="Remove Password Input"' +
           '        onclick="removePassword(event, {{password_id}})">X</button> ';
@@ -123,7 +133,7 @@
           var passwords_div = document.getElementById('passwords_div');
           passwords_div.innerHTML = "";
           passwords_div.parentNode.innerHTML +=
-              '<br><button type="button" id="add_password_button" title="Add Password Input" onclick="addPassword(event);">Password</button>';
+              '<button type="button" id="add_password_button" title="Add Password Input" onclick="addPassword(event);">+</button>';
       }
       function removePassword(event, id){
           event.preventDefault();

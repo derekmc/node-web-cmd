@@ -117,8 +117,16 @@ setInterval(async ()=>{
     }
 }, SAVE_INTERVAL);
 
-setInterval(()=>{
+setInterval(async ()=>{
     if(fs.existsSync(KILL_FILE)){
+        // save database one last time.
+        try{ 
+            await db.save(DB_FILE);
+            if(VERBOSE) console.log('database saved: ' + DB_FILE);
+        } catch(err) {
+            console.err("error saving database file", err);
+        }
+        console.log(`Found KILL_FILE '${KILL_FILE}', shutting down.`);
         fs.unlinkSync(KILL_FILE);
         process.exit(0);
     }

@@ -74,6 +74,8 @@ const VERBOSE = false;
 const {
     USERS,
     SAVE_INTERVAL,
+    KILL_FILE,
+    KILL_INTERVAL,
     PASSWORD_FIELD_PREFIX,
     APP_DATA,
     USER_CONFIGS,
@@ -114,6 +116,13 @@ setInterval(async ()=>{
         console.err("error saving database file", err);
     }
 }, SAVE_INTERVAL);
+
+setInterval(()=>{
+    if(fs.existsSync(KILL_FILE)){
+        fs.unlinkSync(KILL_FILE);
+        process.exit(0);
+    }
+}, KILL_INTERVAL)
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
 const NEW_CONTEXT = "==NEW CONTEXT==";

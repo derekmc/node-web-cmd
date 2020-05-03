@@ -10,6 +10,8 @@
 
 exports.USERS = "users|";
 exports.SAVE_INTERVAL = 10*1000;
+exports.KILL_FILE = "EXIT_SERVER";
+exports.KILL_INTERVAL = 10*1000;
 exports.PASSWORD_FIELD_PREFIX = "cmd_password_input_";
 exports.APP_DATA = "app_data|";
 exports.USER_SESSIONS = "user_sessions|";

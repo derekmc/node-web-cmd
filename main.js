@@ -77,6 +77,8 @@ const VERBOSE = false;
 const {
     USERS,
     SAVE_INTERVAL,
+    KILL_FILE,
+    KILL_INTERVAL,
     PASSWORD_FIELD_PREFIX,
     APP_DATA,
     USER_CONFIGS,
@@ -117,6 +119,21 @@ setInterval(async ()=>{
         console.err("error saving database file", err);
     }
 }, SAVE_INTERVAL);
+
+setInterval(async ()=>{
+    if(fs.existsSync(KILL_FILE)){
+        // save database one last time.
+        try{ 
+            await db.save(DB_FILE);
+            if(VERBOSE) console.log('database saved: ' + DB_FILE);
+        } catch(err) {
+            console.err("error saving database file", err);
+        }
+        console.log(`Found KILL_FILE '${KILL_FILE}', shutting down.`);
+        fs.unlinkSync(KILL_FILE);
+        process.exit(0);
+    }
+}, KILL_INTERVAL)
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
 const NEW_CONTEXT = "==NEW CONTEXT==";

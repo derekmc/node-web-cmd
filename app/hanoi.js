@@ -34,8 +34,7 @@ function dumpState(state){
     return state.turn + "\n" + state.towers.map(tower => tower.join(",")).join(';');
 }
 function printState(state, puts){
-    puts("Turn: " + state.turn);
-    puts("Towers: ");
+    puts("Turn: " + state.turn + ". Towers: ");
     // console.log('state', JSON.stringify(state));
     puts(state.towers.map((tower, i) => " " + ['a', 'b', 'c'][i] + "> " + tower.join(" ")).join('\n'));
 }
@@ -52,8 +51,9 @@ function towerIndex(name){
     return index;
 }
 
-function hanoiApp(args, puts, data){
+function hanoiApp(args, call, data){
     // throw 'test error2';
+    let puts = call.puts;
     let user_state = data.user_state;
     let state = parseState(user_state);
     let msg = "";
@@ -81,7 +81,8 @@ function hanoiApp(args, puts, data){
         if(isFinished(state)){
             msg += "\nTower Finished.";
             msg += "\nThe world is not ending.";
-            msg += "\nCongratulations, on the apocalypse.";
+            msg += "\nCongratulations, on the apocalypse,";
+            msg += "\nIf you survive, good luck!";
             msg += "\n\nType 'reset' to reset.";
             printState(state, puts);
             puts(msg);

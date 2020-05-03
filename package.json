@@ -8,6 +8,8 @@
   },
   "author": "",
   "dependencies": {
+    "leveldown": "^5.6.0",
+    "levelup": "^4.4.0",
     "lodash": "^4.17.15"
   }
 }

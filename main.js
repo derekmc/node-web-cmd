@@ -52,6 +52,9 @@ let http = require('http');
 let fs = require('fs');
 let qs = require('querystring');
 let db = require('./db.js').promiseAPI;
+let levelup = require('levelup');
+let leveldown = require('leveldown');
+let key_db = levelup(leveldown('./mydb'));
 let template = require('lodash')._.template;
 let HelpMessages = {};
 let Commands = {};
@@ -195,10 +198,11 @@ Commands.newuser = function(args, puts, data){
 
 }
 */
-Commands.account = function(args, puts, data){
+Commands.account = function(args, call, data){
     //args.
 }
-Commands.help = function(args, puts, data){
+Commands.help = function(args, call, data){
+    let puts = call.puts;
     if(args.length == 1){
         let cmdlist = [];
         let applist = getKeys(Apps);
@@ -430,7 +434,7 @@ async function serverHandle(request, response){
                 }
 
                 let puts = function(s){ page_data.cmd_out += "\n" + s; }
-                await handleCommand(page_data.cmd_text, puts, page_data);
+                await handleCommand(page_data.cmd_text, {puts: puts}, page_data);
                 cmdPage(page_data);
             }
             catch(error){
@@ -444,7 +448,8 @@ async function serverHandle(request, response){
         let html = "<h1>Unhandled error.</h1>";
         response.end(html);
     }
-    async function handleCommand(cmd_text, puts, page_data){
+    async function handleCommand(cmd_text, call, page_data){
+        let puts = call.puts;
         if(!cmd_text) cmd_text = "";
         puts("> " + cmd_text);
         // aliases require full match
@@ -496,7 +501,7 @@ async function serverHandle(request, response){
                     data.entering_app = page_data.hasOwnProperty('entering_app')? page_data.entering_app : false;
                     let result = null;
                     try{
-                        result = Apps[page_data.app_name](args, puts, data);
+                        result = Apps[page_data.app_name](args, {puts: puts}, data);
                     } catch(e) {
                         puts("\"" + (e.hasOwnProperty('message')? e.message : e) + "\"");
                     }
@@ -517,7 +522,7 @@ async function serverHandle(request, response){
             }
             else if(cmd in Commands){
                 // page_data.app_name = "test app_name";
-                Commands[cmd](args, _puts, cmd_data);
+                Commands[cmd](args, {puts: _puts}, cmd_data);
                 for(var k in cmd_data.user_config){
                     page_data.config[k] = cmd_data.user_config[k]; }
                 // console.log('page config, cmd config:', page_data.config, cmd_data.config);
@@ -532,7 +537,7 @@ async function serverHandle(request, response){
             }
         }
         // wrap puts to start all lines with a space.
-        function _puts(s){ puts(' ' + s); }
+        function _puts(s){ call.puts(' ' + s); }
     }
     // closure for rendering the page.
     function cmdPage(page_data){
@@ -572,4 +577,4 @@ async function serverHandle(request, response){
 
 server.listen(PORT);
 
-console.log(`Server running on port ${PORT}.`);
+// console.log(`Server running on port ${PORT}.`);

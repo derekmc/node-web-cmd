@@ -54,7 +54,8 @@ function dumpConfig(config){
 
 
 
-exports.command = function(args, puts, data){
+exports.command = function(args, call, data){
+    let puts = call.puts
     if(args.length == 1){
         let index = 0;
         for(var k in data.user_config){

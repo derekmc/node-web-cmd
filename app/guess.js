@@ -6,9 +6,10 @@ function randint(n){
     return 1 + Math.floor(n * Math.random());
 }
 
-function guessApp(args, puts, data){
+function guessApp(args, call, data){
     let max, n, guesses, max_guesses;
     let user_state = data.user_state;
+    let puts = call.puts;
     if(user_state == null || user_state == ""){
         max = (args.length > 0 && parseInt(args[0]) > 0)? parseInt(args[0]) : DEFAULT_MAX;
         n = randint(max)

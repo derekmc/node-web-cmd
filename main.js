@@ -52,9 +52,9 @@ let http = require('http');
 let fs = require('fs');
 let qs = require('querystring');
 let db = require('./db.js').promiseAPI;
-let levelup = require('levelup');
-let leveldown = require('leveldown');
-let key_db = levelup(leveldown('./mydb'));
+// let levelup = require('levelup');
+// let leveldown = require('leveldown');
+//let key_db = levelup(leveldown('./mydb'));
 let template = require('lodash')._.template;
 let HelpMessages = {};
 let Commands = {};
@@ -120,6 +120,7 @@ setInterval(async ()=>{
     }
 }, SAVE_INTERVAL);
 
+/*
 setInterval(async ()=>{
     if(fs.existsSync(KILL_FILE)){
         // save database one last time.
@@ -134,6 +135,7 @@ setInterval(async ()=>{
         process.exit(0);
     }
 }, KILL_INTERVAL)
+*/
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
 const NEW_CONTEXT = "==NEW CONTEXT==";

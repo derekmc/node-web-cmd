@@ -1,11 +1,8 @@
 
 module.exports = accountApp;
 
-// TODO only sudo apps accept password inputs.
-accountApp.is_sudo = true;
-
 // TODO rewrite callback style.
-function accountApp(args, puts, data){
+function accountApp(args, call, data){
     let state = data.app_state;
     // let app_context = data.app_context? app_context;
     let passwords = data.passwords;

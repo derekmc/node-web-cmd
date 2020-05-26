@@ -451,7 +451,7 @@ async function serverHandle(request, response){
                 }
 
                 let puts = function(s){ page_data.cmd_out += "\n" + s; }
-                await handleCommand(page_data.cmd_text, {puts: puts}, page_data);
+                await handleCommand(page_data.cmd_text, {puts: puts, db: key_db}, page_data);
                 cmdPage(page_data);
             }
             catch(error){
@@ -518,7 +518,7 @@ async function serverHandle(request, response){
                     data.entering_app = page_data.hasOwnProperty('entering_app')? page_data.entering_app : false;
                     let result = null;
                     try{
-                        result = Apps[page_data.app_name](args, {puts: puts}, data);
+                        result = Apps[page_data.app_name](args, {puts: puts, db: key_db}, data);
                     } catch(e) {
                         puts("\"" + (e.hasOwnProperty('message')? e.message : e) + "\"");
                     }
@@ -594,4 +594,4 @@ async function serverHandle(request, response){
 
 server.listen(PORT);
 
-// console.log(`Server running on port ${PORT}.`);
+console.log(`Server running on port ${PORT}.`);

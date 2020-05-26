@@ -11,11 +11,10 @@
 // Node.js was chosen for two reasons: it provides modern tools
 // and because javascript is a well known language.
 //
-// There are three supported tools that developers may create
-// by implementing a single function:
-//   * Apps
-//   * User Apps
-//   * Commands - commands can manipulate user_logins and user_config.
+// There are two supported tool types that developers may create,
+// each by implementing a single function:
+//   * Apps - have access to user specific 'user_state', and global 'app_state'.
+//   * Commands - commands can manipulate user_info, user_config, and user_id for current session.
 // 
 // Each type of function accepts 3 arguments:
 //   * args: the command line arguments, including the name of the tool.
@@ -48,18 +47,19 @@
 
 // Command 'data' arguments
 
-let http = require('http');
-let fs = require('fs');
-let qs = require('querystring');
-let db = require('./db.js').promiseAPI;
-// let levelup = require('levelup');
-// let leveldown = require('leveldown');
-//let key_db = levelup(leveldown('./mydb'));
-let template = require('lodash')._.template;
-let HelpMessages = {};
-let Commands = {};
-let Aliases = {}
-let Apps = {};
+const bcrypt = require('bcrypt');
+const http = require('http');
+const fs = require('fs');
+const qs = require('querystring');
+const db = require('./db.js').promiseAPI;
+const levelup = require('levelup');
+const leveldown = require('leveldown');
+const key_db = levelup(leveldown('./mydb'));
+const template = require('lodash')._.template;
+const HelpMessages = {};
+const Commands = {};
+const Aliases = {}
+const Apps = {};
 let PORT = 8000;
 if(process.argv.length >= 3){
     PORT = process.argv[2]; }
@@ -75,28 +75,31 @@ const VERBOSE = false;
 // map of session_cookie to user_ids.  Guest sessions have empty string id: "".
 // if it's a guest session, store the app user_data by session_cookie, and not user_id.
 const {
-    USERS,
     SAVE_INTERVAL,
     KILL_FILE,
     KILL_INTERVAL,
     PASSWORD_FIELD_PREFIX,
     APP_DATA,
     USER_CONFIGS,
-    USER_LOGINS,
     USER_APP_DATA,
+    USER_NAMES,
     USER_INFOS,
+    GEN_NEW_USER,
+    LOGIN_USER,
     COOKIE,
     SESSION_COOKIE_LEN,
     SESSION_COOKIE_NAME,
     USER_ID_LEN,
     USER_SESSIONS,
     PASSWORD_MINLENGTH,
+    PASSWORD_SALT_LEN,
     GUEST_ID,
 } = require("./const.js");
 
 loadApp('guess', './app/guess.js');
 loadApp('hanoi', './app/hanoi.js');
 loadCmd('config', './cmd/config.js');
+loadCmd('account', './cmd/account.js');
 let {parseConfig, dumpConfig, DEFAULT_CONFIG} = require('./cmd/config.js');
 
 
@@ -198,28 +201,6 @@ Aliases.tall = 'config rows 33 cols 54';
 
 HelpMessages.help = "Show help for a command. Example: \"help config\".";
 
-/*
-Commands.newuser = function(args, puts, data){
-    let passwords = data.passwords;
-    let user_info = data.user_info;
-
-    if(passwords.length != 2){
-        puts("Error: newuser requires 2 passwords: password and confirm.");
-        return; }
-    if(passwords[0] != passwords[1]){
-        puts("Error: password mismatch.");
-        return; }
-    if(passwords[0].length < PASSWORD_MINLENGTH){
-        puts("Error: password too short.");
-        break;
-    }
-    // to make a new user, add the username and password salt to the table user_infos
-
-}
-*/
-Commands.account = function(args, call, data){
-    //args.
-}
 Commands.help = function(args, call, data){
     let puts = call.puts;
     if(args.length == 1){
@@ -319,7 +300,7 @@ function parseCookies(str){
 // sessions|session_cookie: user_id
 // user_config|user_id: config
 // user_sessions|user_id: [session_cookies]
-// user_logins|user_id: {username, password, salt}
+// user_info|user_id: {username, password_hash, salt}
 // app_data|app_name: { user_states : state } 
 //   
 // user_sessions
@@ -378,15 +359,6 @@ async function serverHandle(request, response){
     page_data.user_key = user_key;
     // console.log('user_key', user_key);
 
-    // Step 4 - Get cmd_data {user_config, user_info} from database.
-    let cmd_keys = { user_config: USER_CONFIGS + user_key, };
-    let cmd_data = await db.get(cmd_keys);
-    // console.log('cmd_data', cmd_data);
-    // cmd_data.user_info = Default(cmd_data.user_info, {});
-    cmd_data.user_config = Default(parseConfig(cmd_data.user_config), parseConfig(DEFAULT_CONFIG));
-    for(let key in cmd_data.user_config){
-        page_data.config[key] = cmd_data.user_config[key];
-    }
     // TODO save user_config after command processing.
     // console.log('page_data.config', page_data.config);
 
@@ -481,6 +453,7 @@ async function serverHandle(request, response){
 
         // clear command works in any context.
         if(cmd == 'clear'){
+            // page_data.entering_app = true;
             page_data.cmd_out = ""; }
         else{
             if(page_data.app_name == "" && (cmd in Apps)){
@@ -517,7 +490,9 @@ async function serverHandle(request, response){
                         'user_state' : user_state_key,
                     }
                     let data = await db.get(app_keys);
+                    // additional data made available to the app.
                     data.entering_app = page_data.hasOwnProperty('entering_app')? page_data.entering_app : false;
+                    data.passwords = page_data.passwords;
                     let result = null;
                     try{
                         result = Apps[page_data.app_name](args, {puts: puts, db: key_db}, data);
@@ -534,21 +509,86 @@ async function serverHandle(request, response){
                         if(result.hasOwnProperty('app_state')){
                             save_keys.app_state = app_state_key; 
                             save_data.app_state = result.app_state; }
-
                         await db.set(save_keys, save_data);
                     }
                 }
             }
             else if(cmd in Commands){
                 // page_data.app_name = "test app_name";
+
+                // Get cmd_data {user_config, user_info, user_id, passwords} from database.
+                let cmd_keys = { user_config: USER_CONFIGS + user_key, user_info: USER_INFOS + user_key, };
+                let cmd_data = await db.get(cmd_keys);
+                // console.log('cmd_data', cmd_data);
+                cmd_data.user_config = Default(parseConfig(cmd_data.user_config), parseConfig(DEFAULT_CONFIG));
+                cmd_data.user_id = page_data.user_id;
+                for(let key in cmd_data.user_config){
+                    page_data.config[key] = cmd_data.user_config[key];
+                }
+                cmd_data.passwords = page_data.passwords;
+
                 Commands[cmd](args, {puts: _puts}, cmd_data);
                 for(var k in cmd_data.user_config){
                     page_data.config[k] = cmd_data.user_config[k]; }
+                //if(cmd_data.user_info != null){
+                //    cmd_data.user_info = ; }
+
+                // login state change.
+                if(cmd_data.user_id != page_data.user_id){
+                    if(cmd_data.user_id == GEN_NEW_USER){
+                        // 
+                        let password = cmd_data.passwords[0];
+                        let password_salt = bcrypt.genSaltSync(PASSWORD_SALT_LEN);
+                        let password_hash = bcrypt.hashSync(password, password_salt);
+                        if(!cmd_data.user_info){ throw new Error("Cannot gen user without userinfo"); }
+                        cmd_data.user_info.password_salt = password_salt;
+                        cmd_data.user_info.password_hash = password_hash;
+                        cmd_data.user_id = await db.genId({
+                            prefix: USER_INFOS,
+                            len: USER_ID_LEN,
+                        })
+                    }
+                    if(cmd_data.user_id == LOGIN_USER){
+                        let password = cmd_data.passwords[0];
+                        // check username and password
+                        if(!cmd_data.user_info){
+                            puts("Unexpected error, no user info.");
+                            return; }
+                        let username = cmd_data.user_info.username;
+                        let login_user_id = await db.get(USER_NAMES + username);
+                        if(!login_user_id){
+                            puts("Unknown user '" + username + "'.");
+                            return; }
+                        let login_user_info = await db.get(USER_INFOS + login_user_id);
+                        if(!login_user_info){
+                            puts("Unexpected error: Cannot retrieve user info.");
+                            return; }
+                        let login_hash = bcrypt.hashSync(password, login_user_info.password_salt);
+                        if(login_hash != login_user_info.passwor_hash){
+                            puts("Incorrect password.");
+                            return; }
+                        cmd_data.user_id = login_user_id;
+                        cmd_data.user_info = null; // don't save user info.
+                    }
+
+                    page_data.user_id = cmd_data.user_id;
+                    // change the session user_id.
+                    await db.set(COOKIE + page_data.session_cookie, cmd_data.user_id);
+                    user_key = cmd_data.user_id;
+                }
                 // console.log('page config, cmd config:', page_data.config, cmd_data.config);
-                await db.set(USER_CONFIGS + user_key, dumpConfig(page_data.config));
-                //await db.set(USER_INFOS + , dumpConfig(page_data.config));
-                //server_data.user_configs[user_key] = dumpConfig(page_data.config);
-                //server_data.user_infos[user_key] = server_data.user_info;
+                console.log('cmd_data.user_info', cmd_data.user_info);
+                let assign_keys = [];
+                let assign_values = [];
+                assign_keys.push(USER_CONFIGS + user_key);
+                assign_values.push(dumpConfig(page_data.config));
+                if(cmd_data.user_info != null){
+                    assign_keys.push(USER_INFOS + user_key);
+                    assign_values.push(cmd_data.user_info);
+                    assign_keys.push(USER_NAMES + cmd_data.user_info.username);
+                    assign_values.push(cmd_data.user_id); }
+                await db.set(assign_keys, assign_values);
+
                 //db.set(server_keys, server_data);
             }
             else{

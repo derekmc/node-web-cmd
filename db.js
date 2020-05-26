@@ -80,6 +80,7 @@ exports.set = function(key, value, next){
                 if(v === undefined){
                     delete __data[k];}
                 else{
+                    console.log("setting value v:", v);
                     __data[k] = v; }}
         } 
         else{

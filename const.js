@@ -1,11 +1,11 @@
 
 // Database data schema
 // difference between guest and a user? A user has login info.
-// sessions|session_cookie: user_id
-// users|user_id:
+// cookie|session_cookie: user_id
 // user_config|user_id: config
 // user_sessions|user_id: [session_cookies]
-// user_logins|user_id: {username, password, salt}
+// user_names|username: user_id,
+// user_infos|user_id: {username, password_hash, password_salt}
 // app_data|app_name: { user_states : state } 
 
 exports.USERS = "users|";
@@ -16,13 +16,18 @@ exports.PASSWORD_FIELD_PREFIX = "cmd_password_input_";
 exports.APP_DATA = "app_data|";
 exports.USER_SESSIONS = "user_sessions|";
 exports.USER_CONFIGS = "user_configs|";
-exports.USER_LOGINS = "user_logins|";
+exports.USER_NAMES = "user_names|";
+// exports.USER_LOGINS = "user_logins|";
 exports.USER_INFOS = "user_infos|";
 exports.USER_APP_DATA = "user_app_data|";
+exports.GEN_NEW_USER = "|GEN_NEW_USER|";
+exports.LOGIN_USER = "|LOGIN_USER|";
+exports.LOGOUT_USER = "|LOGOUT_USER|";
 exports.COOKIE = "cookie|";
 exports.SESSION_COOKIE_LEN = 20;
 exports.USER_ID_LEN = 10;
 exports.PASSWORD_MINLENGTH = 6;
+exports.PASSWORD_SALT_LEN = 10;
 exports.SESSION_COOKIE_NAME = "SessionCookie";
 exports.GUEST_ID = "|GUEST|";
 

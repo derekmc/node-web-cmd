@@ -12,10 +12,10 @@ const {
 exports.help = 
   "User account commands.\n" + 
   " Commands: \n" + 
-  "  account new <username> [password] [confirmpassword]\n" + 
-  "  account login <username> [password]\n" +
-  "  account logout <username> [password]\n" + 
-  "  ? account delete <username> [password]\n"; 
+  "  user new <username> [password] [confirmpassword]\n" + 
+  "  user login <username> [password]\n" +
+  "  user logout <username> [password]\n" + 
+  "  ? user delete <username> [password] [confirmpassword]\n"; 
 
 const ALPHANUMS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 function randstr(chars, len){

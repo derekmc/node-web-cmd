@@ -98,8 +98,8 @@ const {
 
 loadApp('guess', './app/guess.js');
 loadApp('hanoi', './app/hanoi.js');
+loadCmd('user', './cmd/user.js');
 loadCmd('config', './cmd/config.js');
-loadCmd('account', './cmd/account.js');
 let {parseConfig, dumpConfig, DEFAULT_CONFIG} = require('./cmd/config.js');
 
 
@@ -564,7 +564,7 @@ async function serverHandle(request, response){
                             puts("Unexpected error: Cannot retrieve user info.");
                             return; }
                         let login_hash = bcrypt.hashSync(password, login_user_info.password_salt);
-                        if(login_hash != login_user_info.passwor_hash){
+                        if(login_hash != login_user_info.password_hash){
                             puts("Incorrect password.");
                             return; }
                         cmd_data.user_id = login_user_id;

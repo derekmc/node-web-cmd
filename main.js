@@ -527,55 +527,12 @@ async function serverHandle(request, response){
                 }
                 cmd_data.passwords = page_data.passwords;
 
-                Commands[cmd](args, {puts: _puts}, cmd_data);
+                Commands[cmd](args, {puts: _puts, db: db}, cmd_data);
                 for(var k in cmd_data.user_config){
                     page_data.config[k] = cmd_data.user_config[k]; }
                 //if(cmd_data.user_info != null){
                 //    cmd_data.user_info = ; }
 
-                // login state change.
-                if(cmd_data.user_id != page_data.user_id){
-                    if(cmd_data.user_id == GEN_NEW_USER){
-                        // 
-                        let password = cmd_data.passwords[0];
-                        let password_salt = bcrypt.genSaltSync(PASSWORD_SALT_LEN);
-                        let password_hash = bcrypt.hashSync(password, password_salt);
-                        if(!cmd_data.user_info){ throw new Error("Cannot gen user without userinfo"); }
-                        cmd_data.user_info.password_salt = password_salt;
-                        cmd_data.user_info.password_hash = password_hash;
-                        cmd_data.user_id = await db.genId({
-                            prefix: USER_INFOS,
-                            len: USER_ID_LEN,
-                        })
-                    }
-                    if(cmd_data.user_id == LOGIN_USER){
-                        let password = cmd_data.passwords[0];
-                        // check username and password
-                        if(!cmd_data.user_info){
-                            puts("Unexpected error, no user info.");
-                            return; }
-                        let username = cmd_data.user_info.username;
-                        let login_user_id = await db.get(USER_NAMES + username);
-                        if(!login_user_id){
-                            puts("Unknown user '" + username + "'.");
-                            return; }
-                        let login_user_info = await db.get(USER_INFOS + login_user_id);
-                        if(!login_user_info){
-                            puts("Unexpected error: Cannot retrieve user info.");
-                            return; }
-                        let login_hash = bcrypt.hashSync(password, login_user_info.password_salt);
-                        if(login_hash != login_user_info.password_hash){
-                            puts("Incorrect password.");
-                            return; }
-                        cmd_data.user_id = login_user_id;
-                        cmd_data.user_info = null; // don't save user info.
-                    }
-
-                    page_data.user_id = cmd_data.user_id;
-                    // change the session user_id.
-                    await db.set(COOKIE + page_data.session_cookie, cmd_data.user_id);
-                    user_key = cmd_data.user_id;
-                }
                 // console.log('page config, cmd config:', page_data.config, cmd_data.config);
                 console.log('cmd_data.user_info', cmd_data.user_info);
                 let assign_keys = [];

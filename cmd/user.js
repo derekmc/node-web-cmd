@@ -28,7 +28,8 @@ function randstr(chars, len){
 
 // TODO rewrite callback style.
 function accountCmd(args, call, data){
-    let puts = call.puts
+    let puts = call.puts;
+    let db = call.db;
     // let app_context = data.app_context? app_context;
     let passwords = data.passwords;
     

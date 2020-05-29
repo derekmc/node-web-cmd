@@ -79,7 +79,7 @@
         hist_rows = hist.split("\n");
         var cmd_text = document.getElementById("cmd_text");
         cmd_text.addEventListener("keydown", keyDown);
-        cmd_text.focus();
+        cmd_text.addEventListener("keydown", keyDown);
       }
       function editHistRow(){
         var cmd_text = document.getElementById("cmd_text");
@@ -94,8 +94,10 @@
       }
       function downHist(){
         if(hist_index < -1){
-          ++hist_index; }
-        editHistRow();
+          ++hist_index;
+          editHistRow(); }
+        else{
+          addPassword(); }
       }
       function keyDown(e){
         var code = e.keyCode;
@@ -117,7 +119,7 @@
       var PASSWORD_NAME_PREFIX = "cmd_password_input_";
 
       function addPassword(event){
-          event.preventDefault();
+          if(event) event.preventDefault();
           ++passwords_count;
           var div = document.getElementById("passwords_div");
           var span = document.createElement('span');
@@ -125,6 +127,9 @@
           span.id = PASSWORD_SPAN_PREFIX  + id;
           span.innerHTML = password_inputs_html.replace(PASSWORD_ID_REGEX, id);
           div.appendChild(span);
+          var input_id = "cmd_password_input_" + id;
+          var password_input = document.getElementById(input_id);
+          password_input.focus();
           return false;
       }
       // if javascript is available, replace the two default password fields

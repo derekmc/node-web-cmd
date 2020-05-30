@@ -337,7 +337,7 @@ async function serverHandle(request, response){
     let request_cookies = parseCookies(request.headers['cookie']);
     if(request_cookies.hasOwnProperty(SESSION_COOKIE_NAME)){
         page_data.session_cookie = request_cookies[SESSION_COOKIE_NAME];
-        page_data.user_id = await db.get(USER_SESSIONS + page_data.session_cookie);
+        page_data.user_id = await db.get(COOKIE + page_data.session_cookie);
     }
 
     // Step 2 - Generate session_cookie if it does not exist.
@@ -522,29 +522,34 @@ async function serverHandle(request, response){
                 // console.log('cmd_data', cmd_data);
                 cmd_data.user_config = Default(parseConfig(cmd_data.user_config), parseConfig(DEFAULT_CONFIG));
                 cmd_data.user_id = page_data.user_id;
+                cmd_data.session_cookie = page_data.session_cookie;
                 for(let key in cmd_data.user_config){
                     page_data.config[key] = cmd_data.user_config[key];
                 }
                 cmd_data.passwords = page_data.passwords;
 
-                Commands[cmd](args, {puts: _puts, db: db}, cmd_data);
-                for(var k in cmd_data.user_config){
-                    page_data.config[k] = cmd_data.user_config[k]; }
-                //if(cmd_data.user_info != null){
-                //    cmd_data.user_info = ; }
+                let cmd_result = Commands[cmd](args, {puts: _puts, db: db}, cmd_data);
+                Promise.resolve(cmd_result).then(after_cmd);
 
-                // console.log('page config, cmd config:', page_data.config, cmd_data.config);
-                console.log('cmd_data.user_info', cmd_data.user_info);
-                let assign_keys = [];
-                let assign_values = [];
-                assign_keys.push(USER_CONFIGS + user_key);
-                assign_values.push(dumpConfig(page_data.config));
-                if(cmd_data.user_info != null){
-                    assign_keys.push(USER_INFOS + user_key);
-                    assign_values.push(cmd_data.user_info);
-                    assign_keys.push(USER_NAMES + cmd_data.user_info.username);
-                    assign_values.push(cmd_data.user_id); }
-                await db.set(assign_keys, assign_values);
+                async function after_cmd(cmd_result){
+                    for(var k in cmd_data.user_config){
+                        page_data.config[k] = cmd_data.user_config[k]; }
+                    //if(cmd_data.user_info != null){
+                    //    cmd_data.user_info = ; }
+
+                    // console.log('page config, cmd config:', page_data.config, cmd_data.config);
+                    console.log('cmd_data.user_info', cmd_data.user_info);
+                    let assign_keys = [];
+                    let assign_values = [];
+                    assign_keys.push(USER_CONFIGS + user_key);
+                    assign_values.push(dumpConfig(page_data.config));
+                    if(cmd_data.user_info != null){
+                        assign_keys.push(USER_INFOS + user_key);
+                        assign_values.push(cmd_data.user_info);
+                        assign_keys.push(USER_NAMES + cmd_data.user_info.username);
+                        assign_values.push(cmd_data.user_id); }
+                    await db.set(assign_keys, assign_values);
+                }
 
                 //db.set(server_keys, server_data);
             }

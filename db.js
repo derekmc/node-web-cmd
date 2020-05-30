@@ -20,11 +20,11 @@ exports.getIds = function(prefix, next){
     next(undefined, result);
 }
 exports.dump = function(next){
-    next(undefined, JSON.stringify(__data)); 
+    next(undefined, JSON.stringify(__data, null, 2)); 
 }
 exports.save = function(filename, next){
     fs.writeFile(filename? filename : DEFAULT_DB_FILE,
-        JSON.stringify(__data), (err)=>{if(next) next(err)});
+        JSON.stringify(__data, null, 2), (err)=>{if(next) next(err)});
 }
 exports.load = function(filename, next){
     fs.readFile(filename? filename : DEFAULT_DB_FILE,

@@ -9,7 +9,7 @@
 // app_data|app_name: { user_states : state } 
 
 exports.USERS = "users|";
-exports.SAVE_INTERVAL = 10*1000;
+exports.SAVE_INTERVAL = 3*1000;
 exports.KILL_FILE = "EXIT_SERVER";
 exports.KILL_INTERVAL = 10*1000;
 exports.PASSWORD_FIELD_PREFIX = "cmd_password_input_";
@@ -20,14 +20,12 @@ exports.USER_NAMES = "user_names|";
 // exports.USER_LOGINS = "user_logins|";
 exports.USER_INFOS = "user_infos|";
 exports.USER_APP_DATA = "user_app_data|";
-exports.GEN_NEW_USER = "|GEN_NEW_USER|";
-exports.LOGIN_USER = "|LOGIN_USER|";
-exports.LOGOUT_USER = "|LOGOUT_USER|";
 exports.COOKIE = "cookie|";
 exports.SESSION_COOKIE_LEN = 20;
 exports.USER_ID_LEN = 10;
 exports.PASSWORD_MINLENGTH = 1;
 exports.PASSWORD_SALT_LEN = 10;
+exports.SALT_ROUNDS = 10;
 exports.SESSION_COOKIE_NAME = "SessionCookie";
 exports.GUEST_ID = "|GUEST|";
 

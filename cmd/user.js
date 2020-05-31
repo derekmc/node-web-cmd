@@ -91,7 +91,7 @@ async function accountCmd(args, call, data){
             puts("'user login' You must logout before logging into a new account.");
             return; }
         if(passwords.length != 1){
-            puts("'user login' requires 1 password only.");
+            puts("'user login' requires 1 password.");
             return; }
 
         let username = args[2];
@@ -105,7 +105,6 @@ async function accountCmd(args, call, data){
             return; }
         // the hash includes the salt.
         let password_match = await bcrypt.compare(passwords[0], user_info.password_hash);
-        console.log('password_match', password_match);
         if(!password_match){
             puts("'user login' Incorrect password for '" + username + "'");
             return; }

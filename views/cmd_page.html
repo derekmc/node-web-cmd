@@ -129,6 +129,10 @@
           div.appendChild(span);
           var input_id = "cmd_password_input_" + id;
           var password_input = document.getElementById(input_id);
+          password_input.addEventListener("keydown", function(event){
+            var code = event.keyCode;
+            if(code == 40) addPassword();
+          });
           password_input.focus();
           return false;
       }

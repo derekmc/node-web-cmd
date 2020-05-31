@@ -3,7 +3,7 @@
 // difference between guest and a user? A user has login info.
 // cookie|session_cookie: user_id
 // user_config|user_id: config
-// user_sessions|user_id: [session_cookies]
+// user_sessions|user_id: session_cookie // only 1 user session allowed at once.
 // user_names|username: user_id,
 // user_infos|user_id: {username, password_hash, password_salt}
 // app_data|app_name: { user_states : state } 

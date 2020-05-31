@@ -190,6 +190,9 @@ function loadApp(appname, filename){
     Apps[appname] = app;
 }
 
+Aliases.login = 'user login';
+Aliases.logout = 'user logout';
+Aliases.newuser = 'user new';
 Aliases.dark = 'config bg 000 fg fff';
 Aliases.retro = 'config bg 000 fg 6fa';
 Aliases.light = 'config bg fff fg 000';
@@ -443,10 +446,11 @@ async function serverHandle(request, response){
         let puts = call.puts;
         if(!cmd_text) cmd_text = "";
         puts("> " + cmd_text);
-        // aliases require full match
-        if(cmd_text in Aliases){
-            cmd_text = Aliases[cmd_text]; }
+        // aliases match on just the first part of command.
         let args = cmd_text.split(/\s+/);
+        if(args[0] in Aliases){
+            cmd_text = Aliases[args[0]] + " " + args.slice(1).join(" ");
+            args = cmd_text.split(/\s+/); }
         if(args[0] == "") args = [];
         if(page_data.app_name == "" && !args.length) return;
         let cmd = args[0];
@@ -528,29 +532,26 @@ async function serverHandle(request, response){
                 }
                 cmd_data.passwords = page_data.passwords;
 
-                let cmd_result = Commands[cmd](args, {puts: _puts, db: db}, cmd_data);
-                Promise.resolve(cmd_result).then(after_cmd);
+                let cmd_result = await Commands[cmd](args, {puts: _puts, db: db}, cmd_data);
 
-                async function after_cmd(cmd_result){
-                    for(var k in cmd_data.user_config){
-                        page_data.config[k] = cmd_data.user_config[k]; }
-                    //if(cmd_data.user_info != null){
-                    //    cmd_data.user_info = ; }
+                //puts("Command finished.");
+                for(var k in cmd_data.user_config){
+                    page_data.config[k] = cmd_data.user_config[k]; }
+                //if(cmd_data.user_info != null){
+                //    cmd_data.user_info = ; }
 
-                    // console.log('page config, cmd config:', page_data.config, cmd_data.config);
-                    console.log('cmd_data.user_info', cmd_data.user_info);
-                    let assign_keys = [];
-                    let assign_values = [];
-                    assign_keys.push(USER_CONFIGS + user_key);
-                    assign_values.push(dumpConfig(page_data.config));
-                    if(cmd_data.user_info != null){
-                        assign_keys.push(USER_INFOS + user_key);
-                        assign_values.push(cmd_data.user_info);
-                        assign_keys.push(USER_NAMES + cmd_data.user_info.username);
-                        assign_values.push(cmd_data.user_id); }
-                    await db.set(assign_keys, assign_values);
-                }
-
+                // console.log('page config, cmd config:', page_data.config, cmd_data.config);
+                // console.log('cmd_data.user_info', cmd_data.user_info);
+                let assign_keys = [];
+                let assign_values = [];
+                assign_keys.push(USER_CONFIGS + user_key);
+                assign_values.push(dumpConfig(page_data.config));
+                //if(false && cmd_data.user_info != null){
+                //    assign_keys.push(USER_INFOS + user_key);
+                //    assign_values.push(cmd_data.user_info);
+                //    assign_keys.push(USER_NAMES + cmd_data.user_info.username);
+                //    assign_values.push(cmd_data.user_id); }
+                await db.set(assign_keys, assign_values);
                 //db.set(server_keys, server_data);
             }
             else{
@@ -558,7 +559,7 @@ async function serverHandle(request, response){
             }
         }
         // wrap puts to start all lines with a space.
-        function _puts(s){ call.puts(' ' + s); }
+        function _puts(s){ puts(' ' + s); }
     }
     // closure for rendering the page.
     function cmdPage(page_data){

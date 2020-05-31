@@ -3,12 +3,14 @@ exports.command = accountCmd;
 
 const {
     GEN_NEW_USER,
-    LOGIN_USER,
     GUEST_ID,
     PASSWORD_SALT_LEN,
     PASSWORD_MINLENGTH,
+    COOKIE,
     USER_NAMES,
+    USER_SESSIONS,
     USER_INFOS,
+    USER_ID_LEN,
     SALT_ROUNDS,
 } = require("../const.js");
 
@@ -61,7 +63,6 @@ async function accountCmd(args, call, data){
         if(passwords[0].length < PASSWORD_MINLENGTH){
             puts("'account new' password too short. Must be " + PASSWORD_MINLENGTH + " characters.");
             return; }
-        // console.log(password_salt, password_hash);
         let password_hash = await bcrypt.hash(passwords[0], SALT_ROUNDS);
         let user_info = {
             username: username,
@@ -70,43 +71,65 @@ async function accountCmd(args, call, data){
         let gen_id_args = {
             init: user_info,
             prefix: USER_INFOS,
+            len: USER_ID_LEN,
         }
         let new_user_id = await db.genId(gen_id_args);
         let assign_keys = {
             username: USER_NAMES + username,
-            usersession: USER_SESSIONS + new_user_id,
-            oldsession: USER_SESSIONS + data.user_id,
-            cookie: COOKIE + data.session_cookie,
         }
         let assign_values = {
             username: new_user_id,
-            usersession: [data.session_cookie],
-            oldsession: undefined,
-            cookie: new_user_id,
         }
         await db.set(assign_keys, assign_values);
         puts("Created user '" + username + "'. Try logging in.");
     }
     if(acct_cmd == "login"){
         if(args.length != 3){
-            puts("'account login' too many or too few arguments, expected <username> only.");
+            puts("'user login' too many or too few arguments, expected <username> only.");
             return; }
         if(data.user_id != GUEST_ID){
-            puts("'account login' You must logout before logging into a new account.");
+            puts("'user login' You must logout before logging into a new account.");
             return; }
         if(passwords.length != 1){
-            puts("'account login' requires 1 password only.");
+            puts("'user login' requires 1 password only.");
             return; }
 
         let username = args[2];
-        data.user_info = {
-            username: username,
+        let login_user_id = await db.get(USER_NAMES + username);
+        if(!login_user_id){
+            puts("'user login' No such user '" + username + "'");
+            return; }
+        let user_info = await db.get(USER_INFOS + login_user_id);
+        if(!user_info){
+            puts("'user login' Could not retrieve user info '" + username + "'");
+            return; }
+        // the hash includes the salt.
+        let password_match = await bcrypt.compare(passwords[0], user_info.password_hash);
+        console.log('password_match', password_match);
+        if(!password_match){
+            puts("'user login' Incorrect password for '" + username + "'");
+            return; }
+        let assign_keys = {
+            usersession: USER_SESSIONS + login_user_id,
+            oldsession: USER_SESSIONS + data.user_id,
+            cookie: COOKIE + data.session_cookie,
         }
-        data.user_id = LOGIN_USER;
-        puts("Attempting login as '" + username + "'.");
+        let assign_values = {
+            usersession: data.session_cookie,
+            oldsession: undefined,
+            cookie: login_user_id,
+        }
+        await db.set(assign_keys, assign_values);
+        puts("Logged in as '" + username + "'.");
     }
     if(acct_cmd == "logout"){
-        console.log("user logout");
+        if(data.user_id == GUEST_ID){
+            puts("'account logout': You are not logged in.");
+            return; }
+        await db.set(
+          [COOKIE + data.session_cookie, USER_SESSIONS + data.user_id],
+          [GUEST_ID, undefined]);
+        puts("Logged out.");
     }
     if(acct_cmd == "delete"){
         console.log("user delete");

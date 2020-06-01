@@ -10,6 +10,7 @@ const {
     USER_NAMES,
     USER_SESSIONS,
     USER_INFOS,
+    USER_CONFIGS,
     USER_ID_LEN,
     SALT_ROUNDS,
 } = require("../const.js");
@@ -119,6 +120,7 @@ async function accountCmd(args, call, data){
             cookie: login_user_id,
         }
         await db.set(assign_keys, assign_values);
+        data.user_config = await db.get(USER_CONFIGS + login_user_id);
         puts("Logged in as '" + username + "'.");
     }
     if(acct_cmd == "logout"){
@@ -129,6 +131,7 @@ async function accountCmd(args, call, data){
           [COOKIE + data.session_cookie, USER_SESSIONS + data.user_id],
           [GUEST_ID, undefined]);
         puts("Logged out.");
+        data.user_config = await db.get(USER_CONFIGS + data.session_cookie);
     }
     if(acct_cmd == "delete"){
         console.log("user delete");

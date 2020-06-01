@@ -47,6 +47,7 @@
 
 // Command 'data' arguments
 
+const express = require('express');
 const bcrypt = require('bcrypt');
 const http = require('http');
 const fs = require('fs');
@@ -141,6 +142,7 @@ setInterval(async ()=>{
 */
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
+let user_page = template(fs.readFileSync('./views/user_page.html'));
 const NEW_CONTEXT = "==NEW CONTEXT==";
 const alphanum_regex = /^[A-Za-z0-9 ]*$/;
 
@@ -316,9 +318,28 @@ function parseCookies(str){
 //  Step 3 - Set user_key to the user_id, or to the session_cookie if a guest session.
 //  Step 4 - Get cmd_data {user_config} from database.
 
-let server = http.createServer(serverHandle);
+let app = express();
 
-async function serverHandle(request, response){
+let server = app.listen(PORT, function(){
+
+    var host = server.address().address
+    var port = server.address().port
+    console.log("Listening at http://%s:%s", host, port)
+})
+//let server = http.createServer(serverHandle);
+
+app.get('/user', function(request, response){
+    let headers = {"Content-Type": "text/html"};
+    response.writeHead(200, headers);
+    let template_data = {title: "Login/Create Account"};
+    let html = user_page(template_data);
+    response.end(html);
+
+})
+app.get('/', cmdHandler);
+app.post('/', cmdHandler);
+
+async function cmdHandler(request, response){
 
     // Step 0 - Initialize headers, page_data
     let headers = {"Content-Type": "text/html"};
@@ -367,7 +388,7 @@ async function serverHandle(request, response){
 
     // Step 5 - handle GET or POST
     if(request.method == "GET"){
-        response.writeHead(200, headers);
+        // response.writeHead(200, headers);
         cmdPage(page_data);
     }
     if(request.method == "POST"){
@@ -535,8 +556,9 @@ async function serverHandle(request, response){
                 let cmd_result = await Commands[cmd](args, {puts: _puts, db: db}, cmd_data);
 
                 //puts("Command finished.");
-                for(var k in cmd_data.user_config){
-                    page_data.config[k] = cmd_data.user_config[k]; }
+                if(cmd_data.user_config){
+                    for(var k in cmd_data.user_config){
+                        page_data.config[k] = cmd_data.user_config[k]; }}
                 //if(cmd_data.user_info != null){
                 //    cmd_data.user_info = ; }
 
@@ -597,6 +619,4 @@ async function serverHandle(request, response){
     }
 }
 
-server.listen(PORT);
 
-console.log(`Server running on port ${PORT}.`);

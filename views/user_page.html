@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title> <%= title %> </title>
+    <meta charset="UTF-8">
+    <style>
+      * {
+        font-family: sans-serif;
+        color: #030;
+        background: #fff
+        margin-bottom: 4px;
+        outline-color: invert;
+      }
+      small{
+        font-size: 65%;
+      }
+      body{
+        margin: 0;
+        background: gray;
+        }
+      .vertical_form {
+        background: #fff;
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 700px;
+        border: 2px solid #447;
+      }
+      h1{
+        text-align: center;
+        color: #000;
+      }
+      form{
+      }
+      /*.vertical_form h3{
+        text-align: center;
+        background: #00d;
+        color: #fff;
+      }*/
+      .form_title{
+        background: #447;
+        color: #fff;
+        font-size: 105%;
+        padding: 0.6em;
+      }
+      .form_title > div{
+        text-align: center;
+        color: #fff;
+      }
+      .vertical_form th{
+        text-align: right;
+        background: #fff;
+      }
+      .forms_container{
+        padding: 1em;
+        padding-top: 0.3em;
+        display: inline-block;
+        background: #ddd;
+        text-align: center;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    </style>
+
+  </head>
+  <body>
+    <div class="forms_container">
+      <span style="float: right; color: #fff; background: #000; font-size: 115%; padding: 0.2em 0.45em; margin-right: -0.85em; margin-top: -0.10em;"> X </span>
+      <h1> Welcome, Guest. </h1>
+      <hr/>
+      <form method="POST" name="user_login_form">
+        <input type="hidden" name="action" value="user_login"/>
+        <!-- <h3>New User</h3> -->
+        <table class="vertical_form" cellspacing="0px" cellpadding="5">
+          <tr>
+            <td colspan="999" class="form_title">
+              <div> User Login </div>
+            </td>
+          </tr>
+          <tr><th>Username</th><td> <input type="text"></input></td></tr>
+          <tr><th>Password</th><td> <input type="password"></input></td></tr>
+          <tr>
+            <td colspan="999" style="text-align: center">
+              <input type="submit"
+                     style="background: black; color: white; font-size: 110%; padding: 0.3em 1.0em;border: none;">
+              </input>
+            </td>
+          </tr>
+        </table>
+      </form>
+      <hr/>
+      OR
+      <hr/>
+ 
+      <form method="POST" name="new_user_form">
+        <input type="hidden" name="action" value="new_user"/>
+        <!-- <h3>New User</h3> -->
+        <table class="vertical_form" cellspacing="0px" cellpadding="5">
+          <tr>
+            <td colspan="999" class="form_title">
+              <div> New User </div>
+            </td>
+          </tr>
+          <tr><th>Username</th><td> <input type="text"></input></td></tr>
+          <tr><th>Password</th><td> <input type="password"></input></td></tr>
+          <tr><th>Confirm Password</th><td> <input type="password"></input></td></tr>
+          <tr>
+            <td colspan="999" style="text-align: center">
+              <input type="submit"
+                     style="background: black; color: white; font-size: 110%; padding: 0.3em 1.0em;border: none;">
+              </input>
+            </td>
+          </tr>
+        </table>
+      </form>
+      <!--
+        <button style="background: black; color: white; font-size: 140%; padding: 0.3em 2.0em; margin: 0.5em; border: none;">
+          Back
+        </button>
+      -->
+             
+    </div>
+  </body>
+</html>

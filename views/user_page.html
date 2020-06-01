@@ -7,7 +7,7 @@
     <style>
       * {
         font-family: sans-serif;
-        color: #030;
+        color: #000;
         background: #fff
         margin-bottom: 4px;
         outline-color: invert;
@@ -60,12 +60,17 @@
         margin-left: auto;
         margin-right: auto;
       }
+      ::selection, ::moz-selection {
+        background: #4fa;
+        color: #000;
+      }
     </style>
 
   </head>
   <body>
     <div class="forms_container">
-      <span style="float: right; color: #fff; background: #000; font-size: 115%; padding: 0.2em 0.45em; margin-right: -0.85em; margin-top: -0.10em;"> X </span>
+      <a href="/" style="float: right; text-decoration: none; color: #fff; user-select: none; background: #000; font-size: 115%; padding: 0.2em 0.45em; margin-right: -0.76em; margin-top: -0.08em;"
+      > X </a>
       <h1> Welcome, Guest. </h1>
       <hr/>
       <form method="POST" name="user_login_form">
@@ -81,7 +86,7 @@
           <tr><th>Password</th><td> <input type="password"></input></td></tr>
           <tr>
             <td colspan="999" style="text-align: center">
-              <input type="submit"
+              <input type="submit" value="Login"
                      style="background: black; color: white; font-size: 110%; padding: 0.3em 1.0em;border: none;">
               </input>
             </td>
@@ -98,7 +103,7 @@
         <table class="vertical_form" cellspacing="0px" cellpadding="5">
           <tr>
             <td colspan="999" class="form_title">
-              <div> New User </div>
+              <div> Create New User </div>
             </td>
           </tr>
           <tr><th>Username</th><td> <input type="text"></input></td></tr>
@@ -106,13 +111,15 @@
           <tr><th>Confirm Password</th><td> <input type="password"></input></td></tr>
           <tr>
             <td colspan="999" style="text-align: center">
-              <input type="submit"
+              <input type="submit" value="Create"
                      style="background: black; color: white; font-size: 110%; padding: 0.3em 1.0em;border: none;">
               </input>
             </td>
           </tr>
         </table>
       </form>
+      <br>
+      <textarea style="word-break: break-all; hyphens:auto; font-family: monospace; width: 100%; background: black; color: #4fa; height: 8em;"></textarea>
       <!--
         <button style="background: black; color: white; font-size: 140%; padding: 0.3em 2.0em; margin: 0.5em; border: none;">
           Back

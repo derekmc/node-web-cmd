@@ -4,6 +4,7 @@
   <head>
     <title> <%= title %> </title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
       * {
         font-family: monospace;
@@ -24,11 +25,25 @@
   </head>
   <body>
     <form method="POST" name="cmd_form">
-      <textarea name="cmd_out"
-                rows="<%= rows %>"
-                cols="<%= cols %>"
-                readonly style="overflow: hidden; white-space: pre;"><%= cmd_out %>
-      </textarea>
+
+      <div style="display: inline-block;">
+        <% if(app_name.length > 0) { %>
+          <span>
+            <button type="button" title="Exit App"
+              onclick="cmd_text.value='exit'; document.forms['cmd_form'].submit()">X</button>
+            App: <%= app_name %>
+          </span>
+        <% } else {%>
+           <a href="/about/"><%= title %></a>
+        <% } %>
+
+        <span style="float: right; margin-left: 1em;">User: <a href='/user/'><%= user_name %></a></span><br>
+        <textarea name="cmd_out"
+                  rows="<%= rows %>"
+                  cols="<%= cols %>"
+                  readonly style="overflow: hidden; white-space: pre;"><%= cmd_out %>
+        </textarea>
+      </div>
       <!-- TODO: populate these values with template data -->
       <input type="hidden" name="base_cmd_out" id="base_cmd_out" value="<%= base_cmd_out %>" />
       <input type="hidden" name="cmd_hist" id="cmd_hist" value="<%= cmd_hist %>" />
@@ -55,13 +70,6 @@
         </span>
       </span>
     </form>
-    <% if(app_name.length > 0) { %>
-      <div>
-        <button type="button" title="Exit App"
-          onclick="cmd_text.value='exit'; document.forms['cmd_form'].submit()">X</button>
-        App: <%= app_name %>
-      </div>
-    <% } %>
     <!-- a href="https://github.com/derekmc/node-web-cmd/">Github</a-->
     <script>
       var cmd_list = "<%= cmd_list %>".split(' ');
@@ -80,6 +88,8 @@
         var cmd_text = document.getElementById("cmd_text");
         cmd_text.addEventListener("keydown", keyDown);
         cmd_text.addEventListener("keydown", keyDown);
+        var cmd_input = document.getElementById("cmd_text");
+        cmd_input.focus();
       }
       function editHistRow(){
         var cmd_text = document.getElementById("cmd_text");

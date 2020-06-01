@@ -143,6 +143,7 @@ setInterval(async ()=>{
 
 let cmd_page = template(fs.readFileSync('./views/cmd_page.html'));
 let user_page = template(fs.readFileSync('./views/user_page.html'));
+let about_page = template(fs.readFileSync('./views/about_page.html'));
 const NEW_CONTEXT = "==NEW CONTEXT==";
 const alphanum_regex = /^[A-Za-z0-9 ]*$/;
 
@@ -328,13 +329,20 @@ let server = app.listen(PORT, function(){
 })
 //let server = http.createServer(serverHandle);
 
+app.get('/about', function(request, response){
+    let headers = {"Content-Type": "text/html"};
+    response.writeHead(200, headers);
+    let template_data = {title: "About WebApp Terminal."};
+    let html = about_page(template_data);
+    response.end(html);
+})
+
 app.get('/user', function(request, response){
     let headers = {"Content-Type": "text/html"};
     response.writeHead(200, headers);
     let template_data = {title: "Login/Create Account"};
     let html = user_page(template_data);
     response.end(html);
-
 })
 app.get('/', cmdHandler);
 app.post('/', cmdHandler);
@@ -344,7 +352,8 @@ async function cmdHandler(request, response){
     // Step 0 - Initialize headers, page_data
     let headers = {"Content-Type": "text/html"};
     let page_data = {
-        "title": "cmd",
+        "title": "WebApp Terminal (v0)",
+        "user_name": "Guest",
         "config" : parseConfig(DEFAULT_CONFIG),
         "cmd_out" : DEFAULT_CMDOUT,
         "base_cmd_out" : "",
@@ -357,11 +366,16 @@ async function cmdHandler(request, response){
     }
 
     
-    // Step 1 - Get session_cookie from request, and user_id from database.
+    // Step 1 - Get session_cookie from request, and user_id, user_name from database.
     let request_cookies = parseCookies(request.headers['cookie']);
     if(request_cookies.hasOwnProperty(SESSION_COOKIE_NAME)){
         page_data.session_cookie = request_cookies[SESSION_COOKIE_NAME];
         page_data.user_id = await db.get(COOKIE + page_data.session_cookie);
+        if(!page_data.user_id){ // if lookup fails, clear session cookie and create new session.
+            page_data.session_cookie = "";
+            page_data.user_id = GUEST_ID; }
+        page_data.user_name = (page_data.user_id == GUEST_ID? "Guest" :
+            (await db.get(USER_INFOS + page_data.user_id)).username);
     }
 
     // Step 2 - Generate session_cookie if it does not exist.
@@ -375,13 +389,12 @@ async function cmdHandler(request, response){
     }
 
     // Step 3 - Set user_key to user_id, or to session_cookie if guest session.
-    let user_key = page_data.user_id;
-    if(user_key == undefined){
-        user_key = page_data.user_id = GUEST_ID; }
-    if(user_key == GUEST_ID){
-        user_key = page_data.session_cookie; }
-    page_data.user_key = user_key;
-    // console.log('user_key', user_key);
+    page_data.user_key = page_data.user_id;
+    if(page_data.user_key == undefined){
+        page_data.user_key = page_data.user_id = GUEST_ID; }
+    if(page_data.user_key == GUEST_ID){
+        page_data.user_key = page_data.session_cookie; }
+    // console.log('user_key', page_data.user_key);
 
     // TODO save user_config after command processing.
     // console.log('page_data.config', page_data.config);
@@ -493,7 +506,7 @@ async function cmdHandler(request, response){
             }
             if(page_data.app_name.length){
                 let app_state_key = APP_DATA + page_data.app_name;
-                let user_state_key = USER_APP_DATA + user_key + "|" + page_data.app_name;
+                let user_state_key = USER_APP_DATA + page_data.user_key + "|" + page_data.app_name;
                 if(cmd == "reset"){ // resets user
                     page_data.cmd_out = "";
                     await db.set(user_state_key, undefined);
@@ -542,11 +555,13 @@ async function cmdHandler(request, response){
                 // page_data.app_name = "test app_name";
 
                 // Get cmd_data {user_config, user_info, user_id, passwords} from database.
-                let cmd_keys = { user_config: USER_CONFIGS + user_key, user_info: USER_INFOS + user_key, };
+                let cmd_keys = { user_config: USER_CONFIGS + page_data.user_key, user_info: USER_INFOS + page_data.user_key, };
                 let cmd_data = await db.get(cmd_keys);
                 // console.log('cmd_data', cmd_data);
                 cmd_data.user_config = Default(parseConfig(cmd_data.user_config), parseConfig(DEFAULT_CONFIG));
                 cmd_data.user_id = page_data.user_id;
+                cmd_data.user_key = page_data.user_key;
+                cmd_data.user_name = page_data.user_name;
                 cmd_data.session_cookie = page_data.session_cookie;
                 for(let key in cmd_data.user_config){
                     page_data.config[key] = cmd_data.user_config[key];
@@ -555,10 +570,21 @@ async function cmdHandler(request, response){
 
                 let cmd_result = await Commands[cmd](args, {puts: _puts, db: db}, cmd_data);
 
+
+                // checking if username changed to change config, etc.
+                if(page_data.user_key != cmd_data.user_key){
+                    page_data.user_key = cmd_data.user_key;
+                    cmd_data.user_config = await db.get(USER_CONFIGS + cmd_data.user_key);
+                    cmd_data.user_config = Default(parseConfig(cmd_data.user_config), parseConfig(DEFAULT_CONFIG));
+                    page_data.user_name = cmd_data.user_name; }
+
                 //puts("Command finished.");
+                let config_dirty = false;
                 if(cmd_data.user_config){
                     for(var k in cmd_data.user_config){
-                        page_data.config[k] = cmd_data.user_config[k]; }}
+                        if(page_data.config[k] != cmd_data.user_config[k]){
+                            config_dirty = true;
+                            page_data.config[k] = cmd_data.user_config[k]; }}}
                 //if(cmd_data.user_info != null){
                 //    cmd_data.user_info = ; }
 
@@ -566,14 +592,17 @@ async function cmdHandler(request, response){
                 // console.log('cmd_data.user_info', cmd_data.user_info);
                 let assign_keys = [];
                 let assign_values = [];
-                assign_keys.push(USER_CONFIGS + user_key);
-                assign_values.push(dumpConfig(page_data.config));
+
+                if(config_dirty){
+                    assign_keys.push(USER_CONFIGS + page_data.user_key);
+                    assign_values.push(dumpConfig(page_data.config)); }
                 //if(false && cmd_data.user_info != null){
-                //    assign_keys.push(USER_INFOS + user_key);
+                //    assign_keys.push(USER_INFOS + page_data.user_key);
                 //    assign_values.push(cmd_data.user_info);
                 //    assign_keys.push(USER_NAMES + cmd_data.user_info.username);
                 //    assign_values.push(cmd_data.user_id); }
-                await db.set(assign_keys, assign_values);
+                if(assign_keys.length){
+                    await db.set(assign_keys, assign_values); }
                 //db.set(server_keys, server_data);
             }
             else{
@@ -605,6 +634,7 @@ async function cmdHandler(request, response){
         template_data.config = dumpConfig(page_data.config);
         template_data.app_name = page_data.app_name;
         template_data.app_state = page_data.app_state;
+        template_data.user_name = page_data.user_name;
         // template_data.session_cookie = page_data.session_cookie;
 
         // add config vars to rendering data context.

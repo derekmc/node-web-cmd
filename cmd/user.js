@@ -134,7 +134,7 @@ async function accountCmd(args, call, data){
         puts("Logged out.");
         data.user_name = "Guest";
         data.user_key = data.session_cookie;
-        data.user_config = await db.get(USER_CONFIGS + data.session_cookie);
+        // data.user_config = await db.get(USER_CONFIGS + data.session_cookie);
     }
     if(acct_cmd == "delete"){
         console.log("user delete");

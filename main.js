@@ -557,8 +557,8 @@ async function cmdHandler(request, response){
                 // Get cmd_data {user_config, user_info, user_id, passwords} from database.
                 let cmd_keys = { user_config: USER_CONFIGS + page_data.user_key, user_info: USER_INFOS + page_data.user_key, };
                 let cmd_data = await db.get(cmd_keys);
-                // console.log('cmd_data', cmd_data);
                 cmd_data.user_config = Default(parseConfig(cmd_data.user_config), parseConfig(DEFAULT_CONFIG));
+                // console.log('cmd_data', cmd_data);
                 cmd_data.user_id = page_data.user_id;
                 cmd_data.user_key = page_data.user_key;
                 cmd_data.user_name = page_data.user_name;

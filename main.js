@@ -47,6 +47,11 @@
 
 // Command 'data' arguments
 
+//try{
+const T = require('value-types');
+//}catch(e){
+//    const T = function(){ return arguments[arguments.length - 1]; }
+//}
 const express = require('express');
 const bcrypt = require('bcrypt');
 const http = require('http');
@@ -85,8 +90,6 @@ const {
     USER_APP_DATA,
     USER_NAMES,
     USER_INFOS,
-    GEN_NEW_USER,
-    LOGIN_USER,
     COOKIE,
     SESSION_COOKIE_LEN,
     SESSION_COOKIE_NAME,
@@ -95,6 +98,7 @@ const {
     PASSWORD_MINLENGTH,
     PASSWORD_SALT_LEN,
     GUEST_ID,
+    GUEST_NAME,
 } = require("./const.js");
 
 loadApp('guess', './app/guess.js');
@@ -327,33 +331,196 @@ let server = app.listen(PORT, function(){
     var port = server.address().port
     console.log("Listening at http://%s:%s", host, port)
 })
+
+
+async function getLoginData(request){
+    let login_data = {
+        session_cookie: "",
+        user_id: GUEST_ID,
+        user_name: GUEST_NAME,
+    };
+    let request_cookies = parseCookies(request.headers['cookie']);
+    if(request_cookies.hasOwnProperty(SESSION_COOKIE_NAME)){
+        login_data.session_cookie = request_cookies[SESSION_COOKIE_NAME];
+        login_data.user_id = await db.get(COOKIE + login_data.session_cookie);
+        if(!login_data.user_id){ // if lookup fails, clear session cookie and create new session.
+            login_data.session_cookie = "";
+            login_data.user_id = GUEST_ID; }
+        login_data.user_name = (login_data.user_id == GUEST_ID? GUEST_NAME : 
+            (await db.get(USER_INFOS + login_data.user_id)).username);
+    }
+
+    return T(LoginData, login_data);
+}
+
+
 //let server = http.createServer(serverHandle);
 
-app.get('/about', function(request, response){
+app.get('/about', async function(request, response){
     let headers = {"Content-Type": "text/html"};
     response.writeHead(200, headers);
+
     let template_data = {title: "About WebApp Terminal."};
+
+    let login_data = T(LoginData, await getLoginData(request));
+    template_data.user_name = login_data.user_name;
+    template_data.logged_in = (login_data.user_id != GUEST_ID);
+
+    let user_key = login_data.user_id;
+    if(user_key == undefined){
+        user_key = login_data.user_id = GUEST_ID; }
+    if(user_key == GUEST_ID){
+        user_key = login_data.session_cookie; }
+ 
+    let keys = { user_config: USER_CONFIGS + user_key };
+    let data = await db.get(keys);
+    data.config = mergeMap(parseConfig(DEFAULT_CONFIG), parseConfig(data.user_config));
+
+    for(let key in data.config){
+        template_data[key] = data.config[key];
+    }
+
     let html = about_page(template_data);
+
     response.end(html);
 })
 
-app.get('/user', function(request, response){
+async function userRequestHandler(request, response){
     let headers = {"Content-Type": "text/html"};
     response.writeHead(200, headers);
-    let template_data = {title: "Login/Create Account"};
-    let html = user_page(template_data);
-    response.end(html);
-})
-app.get('/', cmdHandler);
-app.post('/', cmdHandler);
 
-async function cmdHandler(request, response){
+    let form_error = null;
+    let form_message = "";
+    if(request.method == "POST"){
+        let requestBody = '';
+        request.on('data', function(_data){
+            requestBody += _data;
+            if(requestBody.length > 1e7) {
+                response.writeHead(413, 'Request Entity Too Large', {'Content-Type': 'text/html'});
+                response.end('<!doctype html><html><head><title>413</title></head><body>413: Request Entity Too Large</body></html>');
+            }
+        });
+        request.on('end', async function(){
+            function puts(s){
+                // console.log('form puts:', s);
+                form_message += s + "\n";
+            }
+            try{
+                let formData = qs.parse(requestBody);
+                // console.log("formData", formData);
+                let loginData = await getLoginData(request);
+
+                // santize all form fields for html characters.
+                for(let k in formData){
+                    formData[k] = escapeHtml(formData[k]); }
+                let action = formData.action;
+                if(action == "user_login"){
+                    // console.log('form user login');
+
+                    if(!("user_login_password" in formData)){
+                        throw new Error("No user_login form password."); }
+                    if(!("user_login_username" in formData)){
+                        throw new Error("No user_login form username."); }
+
+                    let args = ['user', 'login', formData.user_login_username];
+                    let cmd_data = {passwords: [formData.user_login_password]}
+                    Object.assign(cmd_data, loginData);
+                    let login_success = await Commands['user'](args, {puts: puts, db: db}, cmd_data);
+                    if(!login_success){
+                        form_error = form_message;
+                        form_message = null; }
+                } else if(action == "user_logout"){
+                    let args = ['user', 'logout'];
+                    let logout_success = await Commands['user'](args, {puts: puts, db: db}, loginData);
+                    if(!logout_success){
+                        form_error = form_message;
+                        form_message = null; }
+
+                    // console.log('form user logout');
+                } else if(action == "create_user"){
+                    if(!("create_user_username" in formData)){
+                        throw new Error("No create_user form username."); }
+                    if(!("create_user_password" in formData)){
+                        throw new Error("No create_user form password."); }
+                    if(!("create_user_confirm_password" in formData)){
+                        throw new Error("No create_user form confirm password."); }
+
+                    let args = ['user', 'new', formData.create_user_username];
+                    let cmd_data = {passwords: [formData.create_user_password, formData.create_user_confirm_password]}
+                    Object.assign(cmd_data, loginData);
+                    let create_user_success = await Commands['user'](args, {puts: puts, db: db}, cmd_data);
+                    if(!create_user_success){
+                        form_error = form_message;
+                        form_message = null; }
+
+                    // console.log('form user new');
+                } else {
+                    throw new Error("unknown form action: " + action);
+                }
+            }
+            catch(error){
+                errorResponse(error);
+            }
+            await finishRequest();
+        })
+    } else if(request.method == "GET"){
+        await finishRequest();
+    } else {
+        throw new Error("Invalid HTTP method for user page.");
+    }
+    async function finishRequest(){
+        let template_data = {title: "Login/Logout Page."};
+
+        let login_data = T(LoginData, await getLoginData(request));
+        template_data.user_name = login_data.user_name;
+        template_data.logged_in = (login_data.user_id != GUEST_ID);
+        template_data.form_error = form_error;
+        template_data.form_message = form_message;
+        //template_data.form_message = "The Quick Brown Fox Jumped Over The Lazy Dogs Gracefully Today.";
+
+        let user_key = login_data.user_id;
+        if(user_key == undefined){
+            user_key = login_data.user_id = GUEST_ID; }
+        if(user_key == GUEST_ID){
+            user_key = login_data.session_cookie; }
+     
+        let keys = { user_config: USER_CONFIGS + user_key };
+        let data = await db.get(keys);
+        data.config = mergeMap(parseConfig(DEFAULT_CONFIG), parseConfig(data.user_config));
+
+        for(let key in data.config){
+            template_data[key] = data.config[key];
+        }
+
+        let html = user_page(template_data);
+        response.end(html);
+    }
+    function errorResponse(error){
+        console.error('Error handling request.', error);
+        response.writeHead(500, {"Content-Type": "text/html"});
+        let html = "<h1>Unhandled error.</h1>";
+        response.end(html);
+    }
+}
+app.get('/user', userRequestHandler);
+app.post('/user', userRequestHandler);
+
+app.get('/', cmdRequestHandler);
+app.post('/', cmdRequestHandler);
+
+const LoginData = {
+    session_cookie: "",
+    user_id: "",
+    user_name: "",
+}
+
+async function cmdRequestHandler(request, response){
 
     // Step 0 - Initialize headers, page_data
     let headers = {"Content-Type": "text/html"};
     let page_data = {
         "title": "WebApp Terminal (v0)",
-        "user_name": "Guest",
+        "user_name": GUEST_NAME,
         "config" : parseConfig(DEFAULT_CONFIG),
         "cmd_out" : DEFAULT_CMDOUT,
         "base_cmd_out" : "",
@@ -366,17 +533,8 @@ async function cmdHandler(request, response){
     }
 
     
-    // Step 1 - Get session_cookie from request, and user_id, user_name from database.
-    let request_cookies = parseCookies(request.headers['cookie']);
-    if(request_cookies.hasOwnProperty(SESSION_COOKIE_NAME)){
-        page_data.session_cookie = request_cookies[SESSION_COOKIE_NAME];
-        page_data.user_id = await db.get(COOKIE + page_data.session_cookie);
-        if(!page_data.user_id){ // if lookup fails, clear session cookie and create new session.
-            page_data.session_cookie = "";
-            page_data.user_id = GUEST_ID; }
-        page_data.user_name = (page_data.user_id == GUEST_ID? "Guest" :
-            (await db.get(USER_INFOS + page_data.user_id)).username);
-    }
+    // Step 1 - Get session_cookie, user_id, and user_name.
+    Object.assign(page_data, await getLoginData(request));
 
     // Step 2 - Generate session_cookie if it does not exist.
     if(page_data.session_cookie == ""){

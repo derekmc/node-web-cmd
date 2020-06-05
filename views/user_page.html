@@ -17,7 +17,7 @@
       }
       body{
         margin: 0;
-        background: gray;
+        background: #<%= bg %>;
         }
       .vertical_form {
         background: #fff;
@@ -55,75 +55,131 @@
         padding: 1em;
         padding-top: 0.3em;
         display: inline-block;
-        background: #ddd;
+        background: #fff;
         text-align: center;
         margin-left: auto;
         margin-right: auto;
+        position: relative;
+        max-width: 500px;
+        border: 2px outset;
+        border: 3px outset;/* #<%= fg %>;*/
+        margin: 0.65em 1.3em;
       }
       ::selection, ::moz-selection {
         background: #4fa;
         color: #000;
+      }
+      .message_box{
+        margin-top: 0em;
+        display: inline-block;
+        background: #09f;
+        color: white;
+        border-radius: 0.65em;
+        padding: 0.5em 0.8em;
+        user-select: none;
+        max-width: 300px;
+        font-weight: bold;
+      }
+      .message_box.error{
+        background: red;
+        color: white;
       }
     </style>
 
   </head>
   <body>
     <div class="forms_container">
-      <a href=".." style="float: right; text-decoration: none; color: #fff; user-select: none; background: #000; font-size: 115%; padding: 0.2em 0.45em; margin-right: -0.76em; margin-top: -0.08em;"
+      <a href=".." style="float: right; text-decoration: none; color: #fff; user-select: none; background: #000; font-size: 115%; padding: 0.2em 0.45em; margin-right: -0.76em; margin-top: -0.11em;"
       > X </a>
-      <h1> Welcome, Guest. </h1>
-      <hr/>
-      <form method="POST" name="user_login_form">
-        <input type="hidden" name="action" value="user_login"/>
-        <!-- <h3>New User</h3> -->
-        <table class="vertical_form" cellspacing="0px" cellpadding="5">
-          <tr>
-            <td colspan="999" class="form_title">
-              <div> User Login </div>
-            </td>
-          </tr>
-          <tr><th>Username</th><td> <input type="text"></input></td></tr>
-          <tr><th>Password</th><td> <input type="password"></input></td></tr>
-          <tr>
-            <td colspan="999" style="text-align: center">
-              <input type="submit" value="Login"
-                     style="background: black; color: white; font-size: 110%; padding: 0.3em 1.0em;border: none;">
-              </input>
-            </td>
-          </tr>
-        </table>
-      </form>
-      <hr/>
-      OR
-      <hr/>
- 
-      <form method="POST" name="new_user_form">
-        <input type="hidden" name="action" value="new_user"/>
-        <!-- <h3>New User</h3> -->
-        <table class="vertical_form" cellspacing="0px" cellpadding="5">
-          <tr>
-            <td colspan="999" class="form_title">
-              <div> Create New User </div>
-            </td>
-          </tr>
-          <tr><th>Username</th><td> <input type="text"></input></td></tr>
-          <tr><th>Password</th><td> <input type="password"></input></td></tr>
-          <tr><th>Confirm Password</th><td> <input type="password"></input></td></tr>
-          <tr>
-            <td colspan="999" style="text-align: center">
-              <input type="submit" value="Create"
-                     style="background: black; color: white; font-size: 110%; padding: 0.3em 1.0em;border: none;">
-              </input>
-            </td>
-          </tr>
-        </table>
-      </form>
-      <!--
-        <button style="background: black; color: white; font-size: 140%; padding: 0.3em 2.0em; margin: 0.5em; border: none;">
-          Back
-        </button>
-      -->
-             
+      <h1> Welcome, <%= user_name %>. </h1>
+      <% if(form_error){ %>
+        <p class="message_box error">
+          <%= form_error %>
+        </p>
+      <% } %>
+      <% if(form_message){ %>
+        <p class="message_box">
+          <%= form_message %>
+        </p>
+      <% } %>
+      <% if(logged_in) { %>
+        <form method="POST" name="user_logout_form">
+          <input type="hidden" name="action" value="user_logout"/>
+          <table class="vertical_form" cellspacing="0px" cellpadding="5">
+            <tr>
+              <td colspan="999" style="min-width: 300px;" class="form_title">
+                <div> User Logout </div>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="999" style="text-align: center">
+                <input type="submit" value="Logout"
+                       style="background: black; color: white; font-size: 110%; padding: 0.3em 1.0em;border: none;">
+                </input>
+              </td>
+            </tr>
+          </table>
+        </form>
+      <% } else {%>
+        <form method="POST" name="user_login_form">
+          <input type="hidden" name="action" value="user_login"/>
+          <!-- <h3>New User</h3> -->
+          <table class="vertical_form" cellspacing="0px" cellpadding="5">
+            <tr>
+              <td colspan="999" class="form_title">
+                <div> User Login </div>
+              </td>
+            </tr>
+            <tr><th>Username</th>
+                <td> <input type="text" name="user_login_username" id="user_login_username">
+                     </input></td></tr>
+            <tr><th>Password</th>
+                <td> <input type="password" name="user_login_password" id="user_login_password">
+                     </input></td></tr>
+            <tr>
+              <td colspan="999" style="text-align: center">
+                <input type="submit" value="Login"
+                       style="background: black; color: white; font-size: 110%; padding: 0.3em 1.0em;border: none;">
+                </input>
+              </td>
+            </tr>
+          </table>
+        </form>
+        <p><b>OR</b></p>
+   
+        <form method="POST" name="create_user_form">
+          <input type="hidden" name="action" value="create_user"/>
+          <!-- <h3>New User</h3> -->
+          <table class="vertical_form" cellspacing="0px" cellpadding="5">
+            <tr>
+              <td colspan="999" class="form_title">
+                <div> Create New User </div>
+              </td>
+            </tr>
+            <tr><th>Username</th>
+                <td> <input type="text" name="create_user_username" id="create_user_username">
+                     </input></td></tr>
+            <tr><th>Password</th>
+                <td> <input type="password" name="create_user_password" id="create_user_password">
+                     </input></td></tr>
+            <tr><th>Confirm Password</th>
+                <td> <input type="password" name="create_user_confirm_password" id="create_user_confirm_password">
+                     </input></td></tr>
+            <tr>
+              <td colspan="999" style="text-align: center">
+                <input type="submit" value="Create"
+                       style="background: black; color: white; font-size: 110%; padding: 0.3em 1.0em;border: none;">
+                </input>
+              </td>
+            </tr>
+          </table>
+        </form>
+        <!--
+          <button style="background: black; color: white; font-size: 140%; padding: 0.3em 2.0em; margin: 0.5em; border: none;">
+            Back
+          </button>
+        -->
+      <% } %>
     </div>
   </body>
 </html>

@@ -28,4 +28,5 @@ exports.PASSWORD_SALT_LEN = 10;
 exports.SALT_ROUNDS = 10;
 exports.SESSION_COOKIE_NAME = "SessionCookie";
 exports.GUEST_ID = "|GUEST|";
+exports.GUEST_NAME = "Guest";
 

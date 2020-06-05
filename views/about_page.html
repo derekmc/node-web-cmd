@@ -17,7 +17,7 @@
       }
       body{
         margin: 0;
-        background: gray;
+        background: #<%= bg %>;
         }
       .vertical_form {
         background: #fff;
@@ -55,10 +55,12 @@
         padding: 1em;
         padding-top: 0.3em;
         display: inline-block;
-        background: #ddd;
+        background: #fff;
         margin-left: auto;
         margin-right: auto;
         max-width: 500px;
+        border: 3px outset;/* #<%= fg %>;*/
+        margin: 0.65em 1.3em;
       }
       ::selection, ::moz-selection {
         background: #4fa;
@@ -69,7 +71,7 @@
   </head>
   <body>
     <div class="forms_container">
-      <a href=".." style="float: right; text-decoration: none; color: #fff; user-select: none; background: #000; font-size: 115%; padding: 0.2em 0.45em; margin-right: -0.76em; margin-top: -0.08em;"
+      <a href=".." style="float: right; text-decoration: none; color: #fff; user-select: none; background: #000; font-size: 115%; padding: 0.2em 0.45em; margin-right: -0.76em; margin-top: -0.11em;"
       > X </a>
       <h1> WebApp Terminal</h1>
       <h3> About </h3>
@@ -121,7 +123,7 @@
      accounting tools, or cryptocurrencies.
      Nothing is stopping you.
      </p>
-     -Derek McDaniel
+     Derek McDaniel
 
     </div>
   </body>

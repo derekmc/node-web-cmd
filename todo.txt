@@ -1,3 +1,4 @@
+debug saving and loading of config getting corrupted. -- 20.06.04 13:29
 an alternative database for storing data -- 20.05.03 01:47
 list potential security concerns csrf, etc. -- 20.03.17 14:14
 send command list to client, for features like tab completion -- 20.02.15 08:30

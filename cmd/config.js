@@ -9,18 +9,23 @@ exports.help =
   " Type 'config' with no arguments to see current config.\n";
 
 function mergeIntoMap(result, a){
-    for(let k in a){
-        result[k] = a[k]; }
+    if(a != null){
+        for(let k in a){
+            result[k] = a[k]; }}
     return result;
 }
 function mergeMap(a, b){
     let result = {};
-    for(let k in a){
-        result[k] = a[k]; }
-    for(let k in b){
-        result[k] = b[k]; }
+    if(a != null){
+        for(let k in a){
+            result[k] = a[k]; }}
+    if(b != null){
+        for(let k in b){
+            result[k] = b[k]; }}
     return result;
 }
+exports.mergeMap = mergeMap;
+exports.mergeIntoMap = mergeIntoMap;
 
 
 

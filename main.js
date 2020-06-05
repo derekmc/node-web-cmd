@@ -101,7 +101,7 @@ loadApp('guess', './app/guess.js');
 loadApp('hanoi', './app/hanoi.js');
 loadCmd('user', './cmd/user.js');
 loadCmd('config', './cmd/config.js');
-let {parseConfig, dumpConfig, DEFAULT_CONFIG} = require('./cmd/config.js');
+let {parseConfig, dumpConfig, mergeMap, DEFAULT_CONFIG} = require('./cmd/config.js');
 
 
 // load database
@@ -396,6 +396,11 @@ async function cmdHandler(request, response){
         page_data.user_key = page_data.session_cookie; }
     // console.log('user_key', page_data.user_key);
 
+    let cmd_keys = { user_config: USER_CONFIGS + page_data.user_key, user_info: USER_INFOS + page_data.user_key, };
+    let cmd_data = await db.get(cmd_keys);
+    page_data.config = cmd_data.user_config = mergeMap(parseConfig(DEFAULT_CONFIG), parseConfig(cmd_data.user_config));
+
+
     // TODO save user_config after command processing.
     // console.log('page_data.config', page_data.config);
 
@@ -555,9 +560,7 @@ async function cmdHandler(request, response){
                 // page_data.app_name = "test app_name";
 
                 // Get cmd_data {user_config, user_info, user_id, passwords} from database.
-                let cmd_keys = { user_config: USER_CONFIGS + page_data.user_key, user_info: USER_INFOS + page_data.user_key, };
-                let cmd_data = await db.get(cmd_keys);
-                cmd_data.user_config = Default(parseConfig(cmd_data.user_config), parseConfig(DEFAULT_CONFIG));
+                // console.log('getting config for key', page_data.user_key);
                 // console.log('cmd_data', cmd_data);
                 cmd_data.user_id = page_data.user_id;
                 cmd_data.user_key = page_data.user_key;
@@ -569,22 +572,24 @@ async function cmdHandler(request, response){
                 cmd_data.passwords = page_data.passwords;
 
                 let cmd_result = await Commands[cmd](args, {puts: _puts, db: db}, cmd_data);
+                //puts("Command finished.");
 
-
+                let config_dirty = false;
                 // checking if username changed to change config, etc.
                 if(page_data.user_key != cmd_data.user_key){
                     page_data.user_key = cmd_data.user_key;
                     cmd_data.user_config = await db.get(USER_CONFIGS + cmd_data.user_key);
-                    cmd_data.user_config = Default(parseConfig(cmd_data.user_config), parseConfig(DEFAULT_CONFIG));
-                    page_data.user_name = cmd_data.user_name; }
-
-                //puts("Command finished.");
-                let config_dirty = false;
+                    // console.log('cmd_data.user_config, default', cmd_data.user_config, DEFAULT_CONFIG);
+                    cmd_data.user_config = mergeMap(parseConfig(DEFAULT_CONFIG), parseConfig(cmd_data.user_config));
+                    page_data.user_name = cmd_data.user_name;
+                    //page_data.config = cmd_data.user_config;
+                }
                 if(cmd_data.user_config){
                     for(var k in cmd_data.user_config){
                         if(page_data.config[k] != cmd_data.user_config[k]){
                             config_dirty = true;
-                            page_data.config[k] = cmd_data.user_config[k]; }}}
+                            page_data.config[k] = cmd_data.user_config[k]; }}
+                }
                 //if(cmd_data.user_info != null){
                 //    cmd_data.user_info = ; }
 

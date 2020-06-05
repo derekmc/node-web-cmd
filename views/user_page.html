@@ -87,8 +87,8 @@
     </style>
 
   </head>
-  <body>
-    <div class="forms_container">
+  <body onclick="window.location.href='..'">
+    <div class="forms_container" onclick="event.stopPropagation(); return null; ">
       <a href=".." style="float: right; text-decoration: none; color: #fff; user-select: none; background: #000; font-size: 115%; padding: 0.2em 0.45em; margin-right: -0.76em; margin-top: -0.11em;"
       > X </a>
       <h1> Welcome, <%= user_name %>. </h1>

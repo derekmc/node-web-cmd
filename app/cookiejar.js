@@ -10,7 +10,7 @@ module.exports = cookieJarApp;
 
 // backup_hash = hash(site_cookie + destination_site_id)
 // account_backup = hash(currency_name + backup_version + backup_hash)  // backup_hash is not revealed until users want to redeem their backed up accounts
-// the backup counter is incremented every time a specific destination
+// the backup version is incremented every time a specific destination
 //  site calls for a backup.
 
 // backups list balances associated with a hashed 'account_backup' identifier.

@@ -8,14 +8,13 @@ module.exports = cookieJarApp;
 // site_cookie is the cookie token a user uses with a specific site.
 //  it is hash(root_cookie + site_id).
 
-// backup_version = destination_site_id + backup_counter
-// backup_hash = hash(site_cookie + backup_version)
-// account_backup = hash(currency_name + backup_hash)  // site cookie is not revealed until users want to redeem their backed up accounts
-// the backup version is incremented every time a specific destination
+// backup_hash = hash(site_cookie + destination_site_id)
+// account_backup = hash(currency_name + backup_version + backup_hash)  // site cookie is not revealed until users want to redeem their backed up accounts
+// the backup counter is incremented every time a specific destination
 //  site calls for a backup.
 
 // backups list balances associated with a hashed 'account_backup' identifier.
-// users must supply (backup_hash, currency_name) to claim accounts
+// users must supply (backup_hash, backup_version, currency_name) to claim accounts
 //  on a remote site.
 // the currency on the remote site may be mapped to a different name or use a namespace.
 
@@ -90,11 +89,9 @@ function cookieJarApp(args, call, data){
     else if(action == "accounts"){
         checkArgs(args); // no extra arguments besides action
     }
-    // associates a backup_cookie with user.
-    else if(action == "userclaim"){
+    // claims a backed up account for this user.
+    else if(action == "claim"){
     }
-    // claims a specific account for this user.
-    else if(action == "accountclaim"){
     // if authorized, backs up all accounts anonymously.
     else if(action == "backup"){
     }

@@ -8,18 +8,17 @@ module.exports = cookieJarApp;
 // site_cookie is the cookie token a user uses with a specific site.
 //  it is hash(root_cookie + site_id).
 
-// backup_cookie is used to backup accounts to a different site.
-// backup_cookie = hash(site_cookie + destination_site_id)
-// account_backup_cookie = hash(currency_name + backup_version + backup_cookie)
+// backup_version = destination_site_id + backup_counter
+// backup_hash = hash(site_cookie + backup_version)
+// account_backup = hash(currency_name + backup_hash)  // site cookie is not revealed until users want to redeem their backed up accounts
 // the backup version is incremented every time a specific destination
 //  site calls for a backup.
 
-// users should 'claim' their backup_cookie before it's needed,
-//  and report falsely claimed backup cookies.
-//  then they can associate that with their specific site_cookie on the destination site,
-//  so that the 
-// users may 'claim' backed up accounts on another site
-//  claim backup_cookie
+// backups list balances associated with a hashed 'account_backup' identifier.
+// users must supply (backup_hash, currency_name) to claim accounts
+//  on a remote site.
+// the currency on the remote site may be mapped to a different name or use a namespace.
+
 
 // user_state {site_cookie, user_id}
 // users may choose whether to store their root cookie on this site,

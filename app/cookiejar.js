@@ -27,9 +27,16 @@ module.exports = cookieJarApp;
 // Checks are used for transfering funds,
 //  originating or destination accounts.
 // app_state {users, checks, currencies} 
-// users {id: {accts: {currency_name: "0"}}}
-// checks {check_id: ["currency_name", "positive_integer_amount"]}
-// currencies {name: {owner_id, accounts: {user_id: user_accounts}}}
+// users {id: {accounts: {currency_name: account}}}
+// checks {check_id: {currency_name, amount, from, to, time1, time2}}
+//  for debugging purposes, checks store 'from', and 'to' information as well as 'time1' and 'time2'.
+//  if debug is off, this information is omitted.
+//  if debug is off, checks are deleted as soon as they are redeemed.
+//  checks without 'to' have not been redeemed yet.
+// currencies {name: owner_id}
+// account: {balance: X, check_ids: []}
+//  check_ids with 'issue:' prefix, mean it was issued directly into this account.
+//  if debug is off, no check_ids are stored.
 //
 // user_accounts 
 // TODO use site cookies to verify and backup.

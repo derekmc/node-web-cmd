@@ -198,6 +198,7 @@ function loadApp(appname, filename){
     Apps[appname] = app;
 }
 
+Aliases.cj = "cookiejar";
 Aliases.login = 'user login';
 Aliases.logout = 'user logout';
 Aliases.newuser = 'user new';
@@ -694,6 +695,7 @@ async function cmdRequestHandler(request, response){
                     let data = await db.get(app_keys);
                     // additional data made available to the app.
                     data.entering_app = page_data.hasOwnProperty('entering_app')? page_data.entering_app : false;
+                    data.user_key = page_data.user_key;
                     data.passwords = page_data.passwords;
                     let result = null;
                     try{

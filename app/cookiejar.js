@@ -9,13 +9,14 @@ module.exports = cookieJarApp;
 //  it is hash(root_cookie + site_id).
 
 // backup_hash = hash(site_cookie + destination_site_id)
-// account_backup = hash(currency_name + backup_version + backup_hash)  // site cookie is not revealed until users want to redeem their backed up accounts
+// account_backup = hash(currency_name + backup_version + backup_hash)  // backup_hash is not revealed until users want to redeem their backed up accounts
 // the backup counter is incremented every time a specific destination
 //  site calls for a backup.
 
 // backups list balances associated with a hashed 'account_backup' identifier.
-// users must supply (backup_hash, backup_version, currency_name) to claim accounts
-//  on a remote site.
+// users must supply backup_hash to claim accounts
+//  on a remote site, which the remote site can use
+//  to identify all the associated account_backup's.
 // the currency on the remote site may be mapped to a different name or use a namespace.
 
 

@@ -103,6 +103,7 @@ const {
 
 loadApp('guess', './app/guess.js');
 loadApp('hanoi', './app/hanoi.js');
+loadApp('cookiejar', './app/cookiejar.js');
 loadCmd('user', './cmd/user.js');
 loadCmd('config', './cmd/config.js');
 let {parseConfig, dumpConfig, mergeMap, DEFAULT_CONFIG} = require('./cmd/config.js');
@@ -696,7 +697,7 @@ async function cmdRequestHandler(request, response){
                     data.passwords = page_data.passwords;
                     let result = null;
                     try{
-                        result = Apps[page_data.app_name](args, {puts: puts, db: key_db}, data);
+                        result = await Apps[page_data.app_name](args, {puts: puts, db: key_db}, data);
                     } catch(e) {
                         puts("\"" + (e.hasOwnProperty('message')? e.message : e) + "\"");
                     }

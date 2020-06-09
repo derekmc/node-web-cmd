@@ -148,6 +148,7 @@ function cookieJarApp(args, call, data){
         user_accounts[currency_name] = Default(0, user_accounts[currency_name]);
         user_accounts[currency_name] += amount;
         puts(`You issued ${amount} units of currency '${currency_name}'.`);
+        puts(`Balance of ${currency_name} : ${user_accounts[currency_name]}`);
     }
     // create a 'check' to send funds to another user. [currency_name, amount] -> check_id
     else if(action == "send"){

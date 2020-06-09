@@ -35,8 +35,9 @@ module.exports = cookieJarApp;
 // TODO use site cookies to verify and backup.
 
 const COOKIEJAR_INITSTATE = {
-    currencies: {},
     users: {},
+    checks: {},
+    currencies: {},
 }
 function Default(def, value){
     if(value == "" || value === null || value === undefined){
@@ -61,6 +62,7 @@ function cookieJarApp(args, call, data){
         }
     }
     // sets the user's 'sitecookie' used with this site
+    // TODO, this should be done directly with an exposed API call, and not a command line call.
     if(action == "sitecookie"){
         checkArgs(args, 'cookie');
     }

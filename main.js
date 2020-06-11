@@ -405,7 +405,7 @@ async function userRequestHandler(request, response){
         request.on('end', async function(){
             function puts(s){
                 // console.log('form puts:', s);
-                form_message += s + "\n";
+                form_message += (s? s: "") + "\n";
             }
             try{
                 let formData = qs.parse(requestBody);
@@ -626,7 +626,7 @@ async function cmdRequestHandler(request, response){
                     }
                 }
 
-                let puts = function(s){ page_data.cmd_out += "\n" + s; }
+                let puts = function(s){ page_data.cmd_out += "\n" + (s? s: ""); }
                 await handleCommand(page_data.cmd_text, {puts: puts, db: key_db}, page_data);
                 cmdPage(page_data);
             }

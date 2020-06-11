@@ -60,7 +60,7 @@ const HELP =
   supply - Show the total supply of each currency.
 
 Issuer Actions:
-  create (currency) - Creates a new currency
+  create (currency) (supply) - Creates a new currency
   issue (currency) (amount) - Issues (amount) of (currency) to your account.
   lock (currency) - prevents issuing new supply of currency.
 
@@ -201,16 +201,15 @@ function cookieJarApp(args, call, data){
     else if(action == "rootcookie"){
         checkArgs(args);
         // TODO remove this action entirely for security reasons, and prompt to use a 3rd party tool.
-        puts("==Warning== It is recommended to use a 3rd party tool to handle rootcookies.");
+        puts("Warning: It is recommended to use a 3rd party tool to handle rootcookies.");
         let root_cookie = "";
         if(passwords.length == 0){
             root_cookie = ROOT_COOKIE_PREFIX + randstr(ID_CHARS, ID_LEN);
-            puts(" Store the generated root cookie in a secure location.");
-            puts(" It is required to recover backed up accounts,");
-            puts("  and you cannot recover this value later.");
-            puts("Root cookie: " + root_cookie);
+            puts();
+            puts("STORE THE ROOTCOOKIE, IT CANNOT BE RECOVERED.");
+            puts("Root Cookie: " + root_cookie);
         }
-        if(passwords.length == 1){
+        else if(passwords.length == 1){
             root_cookie = passwords[0];
             if(!root_cookie.match(ROOT_COOKIE_REGEX)){
                 puts(`Root cookie should have prefix ${ROOT_COOKIE_REGEX}`);
@@ -223,7 +222,7 @@ function cookieJarApp(args, call, data){
         }
         site_cookie = sha256(app_state.site_id + root_cookie);
         createUser(app_state, user_state, site_cookie);
-        puts("Site Cookie set using rootcookie.");
+        puts("Site Cookie: " + site_cookie);
     }
     // sets the user's 'sitecookie' used with this site
     else if(action == "sitecookie"){
@@ -239,6 +238,17 @@ function cookieJarApp(args, call, data){
         }
         createUser(app_state, user_state, site_cookie);
     }
+    else if(action == "supply"){
+        let has_currencies = false;
+        for(let currency_name in currencies){
+            has_currencies = true;
+            let currency_info = currencies[currency_name];
+            puts(`${currency_name} : ${currency_info.supply}` + (currency_info.locked? " (locked)" : ""));
+        }
+        if(!has_currencies){
+            puts("No currencies created.");
+        }
+    }
     else if(site_cookie === null || site_cookie == ""){
         error("You must set sitecookie before performing user or issuer actions.");
     }
@@ -252,13 +262,18 @@ function cookieJarApp(args, call, data){
         // ==== Issuer Actions ====
         // create a currency [currency_name] -> success
         if(action == "create"){
-            checkArgs(args, 'currency_name');
+            if(args.length > 3) error("'create' takes at most 2 arguments.");
             let currency_name = args[1];
             if(currency_name in currencies){
-                error(`currency ${currency_name} already exists.`); }
-            currencies[currency_name] = {issuer_user_id: user_id, supply: 0, locked: false};
-            user_info.accounts[currency_name] = 0;
-            puts(`Currency '${currency_name}' created. You are the issuing authority.`);
+                error(`currency ${currency_name} already exists. Try 'issue' command.`); }
+
+            let init_supply = args.length > 2? parseInt(args[2]) : 0;
+            if(init_supply < 0 || isNaN(init_supply)){
+                error("'create' invalid supply: " + init_supply); }
+
+            currencies[currency_name] = {issuer_user_id: user_id, supply: init_supply, locked: false};
+            user_info.accounts[currency_name] = init_supply;
+            puts(`Currency '${currency_name}' created with ${init_supply} units. You are the issuing authority.`);
         }
         // issue a new balance for an owned currency. [currency_name, amount] -> success
         else if(action == "issue"){
@@ -276,6 +291,7 @@ function cookieJarApp(args, call, data){
                 error(`Invalid issue amount '${amount}'`); }
             user_info.accounts[currency_name] = Default(0, user_info.accounts[currency_name]);
             user_info.accounts[currency_name] += amount;
+            currency_info.supply += amount;
             puts(`You issued ${amount} units of currency '${currency_name}'.`);
             puts(`Balance of ${currency_name} : ${user_info.accounts[currency_name]}`);
         }
@@ -290,7 +306,6 @@ function cookieJarApp(args, call, data){
             currency_info.locked = true;
             puts(`Locked '${currency_name}'. You cannot issue more.`);
         }
-
         // ==== User Actions ====
         // create a 'check' to send funds to another user. [currency_name, amount] -> check_id
         else if(action == "send"){

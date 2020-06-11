@@ -33,7 +33,7 @@ function sha256(s){
 // Checks are used for transfering funds,
 //  originating or destination accounts.
 // app_state {site_cookies, users, checks, currencies, site_id} 
-// users {id: {site_cookie, accounts: {currency_name: balance}}}
+// users {id: {site_cookie, action_log, accounts: {currency_name: balance}}}  -- action_log can be turned on of off, and is not backed up to other services.
 // checks {check_id: {currency_name, amount, from, to, time1, time2}}
 //  for debugging purposes, checks store 'from', and 'to' information as well as 'time1' and 'time2'.
 //  if debug is off, this information is omitted.
@@ -52,6 +52,8 @@ const GREETING =
 ===========================
 `;
 
+// TODO allow users to turn an action history on or off, that records a log
+// of all their actions which affect state.
 const HELP =
 `Site Actions:
   siteid - Display this site's Site ID.

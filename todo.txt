@@ -1,3 +1,5 @@
+allow clickable underlined textlink commands. -- 20.06.11 12:13
+allow raw webrequests to commands and apps. -- 20.06.11 12:12
 clickable text links in output. -- 20.06.11 08:36
 an alternative database for storing data -- 20.05.03 01:47
 list potential security concerns csrf, etc. -- 20.03.17 14:14

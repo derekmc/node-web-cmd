@@ -54,7 +54,7 @@ async function userCmd(args, call, data){
             puts("'user new' requires 2 passwords to confirm password.");
             return false; }
         // check username
-        let username = args[2];
+        let username = args[2].trim().toLowerCase();
         let existing_user_id = await db.get(USER_NAMES + username);
         if(existing_user_id){
             puts("'user new' user exists: '" + username + "'");
@@ -97,7 +97,7 @@ async function userCmd(args, call, data){
             puts("'user login' requires 1 password.");
             return false; }
 
-        let username = args[2];
+        let username = args[2].trim().toLowerCase();
         let login_user_id = await db.get(USER_NAMES + username);
         if(!login_user_id){
             puts("'user login' No such user '" + username + "'");

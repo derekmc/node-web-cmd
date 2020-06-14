@@ -1,3 +1,4 @@
+have separate admin actions. -- 20.06.14 15:55
 allow clickable underlined textlink commands. -- 20.06.11 12:13
 allow raw webrequests to commands and apps. -- 20.06.11 12:12
 clickable text links in output. -- 20.06.11 08:36

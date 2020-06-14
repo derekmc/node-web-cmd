@@ -5,6 +5,72 @@ function sha256(s){
     return new shajs('sha256').update(s).digest('base64');
 }
 
+const BackupInfo = {
+    site_cookie: "",
+    originating_site_id: "",
+    destination_site_id: "",
+    backup_version: "",
+}
+/*
+*/
+
+function checkHash(check_id, backup_info){
+    let info = backup_info;
+    let siteA = info.originating_site_id;
+    let siteB = info.destination_site_id;
+    let version = info.backup_version;
+    return sha256(check_id + siteA + siteB + version);
+}
+
+function backupHash(backup_info){
+    let info = backup_info;
+    let cookieA = info.site_cookie;
+    let siteB = info.destination_site_id;
+    let version = info.backup_version;
+    return sha256(cookieA + siteB + version);
+}
+
+function accountHash(currency_name, backup_hash){
+    return sha256(currency_name + backup_hash);
+}
+
+// This function doesn't actually need the backup version
+function generateBackup(data, backup_info){
+    T(BackupInfo, backup_info);
+    let timestamp = "" + (new Date()).now();
+
+    let result = {
+        timestamp: timestamp,
+        backup_version: backup_info.backup_version,
+        originating_site_id: backup_info.originating_site_id,
+        destination_site_id: backup_info.destination_site_id,
+        accounts: [],
+        checks: []
+    }
+    
+    let users = data.users;
+    for(let user_id in users){
+        let backup_hash = backup_hash(backup_info);
+        let accounts = users[user_id].accounts;
+        for(let currency_name in accounts){
+            let balance = accounts[currency_name];
+            let account_hash = accountHash(currency_name, backup_hash);
+            let backup_account_info = {account_hash, balance}
+            result.accounts.push(backup_account_info);
+        }
+    }
+    let checks = data.checks;
+    for(let check_id in checks){
+        let check_hash = checkHash(check_id, backup_info);
+        let check_info = checks[check_id];
+        let currency_name = check_info.currency_name;
+        let amount = check_info.amount
+        let backup_check_info = {check_hash, currency_name, amount};
+        result.checks.push(backup_check_info);
+    }
+    return result;
+}
+
 // TODO handle arbitrary precision integer strings.
 // TODO use a proper database instead of 'app_state', for scalability.
 
@@ -16,9 +82,10 @@ function sha256(s){
 // site_cookie = hash(site_id + root_cookie).
 
 // backup_hash = hash(originating_site_cookie + destination_site_id + backup_version) // accounts cannot be linked to other backup versions.
-// account_backup = hash(currency_name + backup_hash)  // backup_hash is not revealed until users want to redeem their backed up accounts
+// account_hash = hash(currency_name + backup_hash)  // backup_hash is not revealed until users want to redeem their backed up accounts
 // the backup version is changed every time a specific destination
 //  site calls for a backup.
+// check_hash = hash(check_id + originating_site_id + destination_site_id + backup_version)
 
 // backups list balances associated with a hashed 'account_backup' identifier.
 // users must supply backup_hash to claim accounts
@@ -34,14 +101,23 @@ function sha256(s){
 // Checks are used for transfering funds,
 //  originating or destination accounts.
 // app_state {site_cookies, users, checks, currencies, site_id} 
-// users {id: {site_cookie, action_log, accounts: {currency_name: balance}}}  -- action_log can be turned on of off, and is not backed up to other services.
-// checks {check_id: {currency_name, amount, from, to, time1, time2}}
+// users {id: {site_cookie, action_log, accounts: {currency_name: balance}}}
+//   -- user action_log can be turned on of off, and is not backed up to other services.
+// checks {check_id: {currency_name, amount}}
 //  for debugging purposes, checks store 'from', and 'to' information as well as 'time1' and 'time2'.
 //  if debug is off, this information is omitted.
 //  if debug is off, checks are deleted as soon as they are redeemed.
 //  checks without 'to' have not been redeemed yet.
 // currencies {name: {owner_id, supply, locked}}
-// XXXX account: {balance: X, check_ids: []}
+// backup_versions {destination_site_id : {version_id}}
+// backups: {backup_version: {
+//     timestamp,
+//     originating_site_id,
+//     destination_site_id,
+//     // see notes at top of file for hash information.
+//     accounts: [{account_hash, balance}],
+//     checks: [{check_hash, currency_name, amount}],
+//  }}
 //  check_ids with 'issue:' prefix, mean it was issued directly into this account.
 //  if debug is off, no check_ids are stored.
 //
@@ -59,7 +135,8 @@ const HELP =
 `Site Actions:
   info - More information on CookieJar.
   siteid - Display this site's Site ID.
-  backup - Anonymize and backup all server accounts.
+  backup (destid) - Anonymize and backup all server accounts
+   for specified (destid) destination site id.
   supply - Show the total supply of each currency.
 
 Issuer Actions:
@@ -145,6 +222,14 @@ function initCookieJar(){
         users: {},
         checks: {},
         currencies: {},
+
+        // backups: {backup_version: {
+        //     timestamp,
+        //     originating_site_id,
+        //     // see notes at top of file for hash information.
+        //     accounts: [{account_hash, balance}],
+        //     checks: [check_hash]}}
+        backups: {}, 
         site_id: genSiteID(),
     };
 }
@@ -228,6 +313,25 @@ function cookieJarApp(args, call, data){
     else if(action == "siteid"){
         puts("Site ID: " + app_state.site_id);
     }
+    else if(action == "supply"){
+        let has_currencies = false;
+        let user_id = (site_cookie === null || site_cookie == "")? null : app_state.site_cookies[site_cookie];
+        for(let currency_name in currencies){
+            has_currencies = true;
+            let currency_info = currencies[currency_name];
+
+            if(currency_info === undefined){
+                error(`Unexpected error: Could not find data on currency '${currency_name}'`); }
+            let is_issuer = user_id == currency_info.issuer_user_id;
+            let is_locked = currency_info.locked;
+
+            puts(`${currency_name} : ${currency_info.supply}`
+              + (is_issuer? " (issuer)" : "")  + (is_locked? " (locked)" : ""));
+        }
+        if(!has_currencies){
+            puts("No currencies created.");
+        }
+    }
     else if(action == "newroot"){
         checkArgs(args);
 
@@ -272,17 +376,6 @@ function cookieJarApp(args, call, data){
             error("Site Cookie wrong format, not a a base64 sha256 hash.");
         }
         createUser(app_state, user_state, site_cookie);
-    }
-    else if(action == "supply"){
-        let has_currencies = false;
-        for(let currency_name in currencies){
-            has_currencies = true;
-            let currency_info = currencies[currency_name];
-            puts(`${currency_name} : ${currency_info.supply}` + (currency_info.locked? " (locked)" : ""));
-        }
-        if(!has_currencies){
-            puts("No currencies created.");
-        }
     }
     else if(site_cookie === null || site_cookie == ""){
         error("You must set sitecookie before performing user or issuer actions.");
@@ -395,8 +488,10 @@ function cookieJarApp(args, call, data){
                 if(currency_info === undefined){
                     error(`Unexpected error: Could not find data on currency '${currency_name}'`); }
                 let is_issuer = user_id == currency_info.issuer_user_id;
+                let is_locked = currency_info.locked;
 
-                puts(`${currency_name} : ${balance}` + (is_issuer? " (issuer)" : "")); }
+                puts(`${currency_name} : ${balance}`
+                  + (is_issuer? " (issuer)"  + (is_locked? " (locked)" : "") : "")); }
         }
         // claims a backed up account for this user.
         else if(action == "claim"){
@@ -404,6 +499,14 @@ function cookieJarApp(args, call, data){
         }
         // if authorized, backs up all accounts anonymously.
         else if(action == "backup"){
+            checkArgs(args, "destination_site_id", "backup_version");
+            let backup_info = {
+                site_cookie: site_cookie,
+                originating_site_id: app_state.site_id,
+                destination_site_id: args[1],
+                backup_version: args[2],
+            }
+
             puts("TODO write backup action.");
         }
         else if(action !== undefined){

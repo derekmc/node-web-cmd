@@ -389,9 +389,14 @@ function cookieJarApp(args, call, data){
         // lists a users account balances and transactions.
         else if(action == "account" || action == "accounts"){
             checkArgs(args); // no extra arguments besides action
-            for(let currency in user_info.accounts){
-                let balance = user_info.accounts[currency];
-                puts(`${currency} : ${balance}`); }
+            for(let currency_name in user_info.accounts){
+                let balance = user_info.accounts[currency_name];
+                let currency_info = currencies[currency_name];
+                if(currency_info === undefined){
+                    error(`Unexpected error: Could not find data on currency '${currency_name}'`); }
+                let is_issuer = user_id == currency_info.issuer_user_id;
+
+                puts(`${currency_name} : ${balance}` + (is_issuer? " (issuer)" : "")); }
         }
         // claims a backed up account for this user.
         else if(action == "claim"){

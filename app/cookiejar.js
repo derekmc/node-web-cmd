@@ -36,8 +36,9 @@ function accountHash(currency_name, backup_hash){
 
 // This function doesn't actually need the backup version
 function generateBackup(data, backup_info){
-    T(BackupInfo, backup_info);
-    let timestamp = "" + (new Date()).now();
+    // T(BackupInfo, backup_info);
+    let timestamp = "TODO timestamp";
+    // let timestamp = "" + (new Date()).now();
 
     let result = {
         timestamp: timestamp,
@@ -50,7 +51,7 @@ function generateBackup(data, backup_info){
     
     let users = data.users;
     for(let user_id in users){
-        let backup_hash = backup_hash(backup_info);
+        let backup_hash = backupHash(backup_info);
         let accounts = users[user_id].accounts;
         for(let currency_name in accounts){
             let balance = accounts[currency_name];
@@ -506,8 +507,11 @@ function cookieJarApp(args, call, data){
                 destination_site_id: args[1],
                 backup_version: args[2],
             }
+            
+            let backup_data = generateBackup(app_state, backup_info);
+            puts(JSON.stringify(backup_data));
 
-            puts("TODO write backup action.");
+            // puts("TODO write backup action.");
         }
         else if(action !== undefined){
             puts(HELP);

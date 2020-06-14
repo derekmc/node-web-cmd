@@ -57,23 +57,47 @@ const GREETING =
 // of all their actions which affect state.
 const HELP =
 `Site Actions:
+  info - More information on CookieJar.
   siteid - Display this site's Site ID.
   backup - Anonymize and backup all server accounts.
-  claim (backup_hash) - TODO claim backed up accounts
   supply - Show the total supply of each currency.
 
 Issuer Actions:
   create (currency) (supply) - Creates a new currency
-  issue (currency) (amount) - Issues (amount) of (currency) to your account.
+  issue (currency) (amount) - Issues (amount) of (currency).
   lock (currency) - prevents issuing new supply of currency.
 
 User Actions:
-  rootcookie [rootcookie] - Accepts or generates a rootcookie to set the sitecookie.
-  sitecookie - Sets the sitecookie, used to authenticate and anonymize backups.
-  send (currency) (amount)... - Create a new check for (amount) of (currencies).
+  newroot - Generates new rootcookie and sitecookie. (WARNING)
+  setroot - Uses rootcookie to set the sitecookie. (WARNING)
+  sitecookie - Sets the sitecookie.
+  send (currency) (amount) - Create check for (amount) of (currency).
   accept (check_id) - Accept a check from another user.
   account - Show the balances of currencies in your account.
+  claim (backup_hash) - TODO claim backed up accounts
 `;
+
+const INFO =
+`Cookie Jar is a minimalist currency exchange server.
+In contrast with most cryptocurrencies, it relies
+on a trusted, centralized, service provider, but with
+the benefit of decentralized and anonymized backups.
+This allows the service provider to be replaced in
+case of failure, without losing transactions or
+account balances since the last backup.
+
+If the trusted service provider proves unreliable,
+the community may choose a new service provider,
+in which case, users will have to claim their backed
+up accounts on the new service.
+
+Backups anonymize account data using hashes for
+privacy. Every balance, per currency type and user,
+is identified as a distinct record with a unique
+hash, which cannot be linked to other records,
+except by the new service provider after the user
+claims their accounts.
+`
 
 // const ALPHANUMS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 // alphanumerics except O 0 or l
@@ -194,6 +218,9 @@ function cookieJarApp(args, call, data){
         puts(GREETING);
         puts(HELP);
     }
+    else if(action == "info"){
+        puts(INFO);
+    }
     else if(action == "help"){
         puts(HELP);
     }
@@ -201,27 +228,32 @@ function cookieJarApp(args, call, data){
     else if(action == "siteid"){
         puts("Site ID: " + app_state.site_id);
     }
-    else if(action == "rootcookie"){
+    else if(action == "newroot"){
+        checkArgs(args);
+
+        puts("Warning: It is recommended to use a 3rd party tool to handle rootcookies.");
+        root_cookie = ROOT_COOKIE_PREFIX + randstr(ID_CHARS, ID_LEN);
+        puts();
+        puts("STORE THE ROOTCOOKIE, IT CANNOT BE RECOVERED.");
+        puts("Root Cookie: " + root_cookie);
+
+        site_cookie = sha256(app_state.site_id + root_cookie);
+        createUser(app_state, user_state, site_cookie);
+        puts("Site Cookie: " + site_cookie);
+    }
+    else if(action == "setroot"){
         checkArgs(args);
         // TODO remove this action entirely for security reasons, and prompt to use a 3rd party tool.
         puts("Warning: It is recommended to use a 3rd party tool to handle rootcookies.");
         let root_cookie = "";
-        if(passwords.length == 0){
-            root_cookie = ROOT_COOKIE_PREFIX + randstr(ID_CHARS, ID_LEN);
-            puts();
-            puts("STORE THE ROOTCOOKIE, IT CANNOT BE RECOVERED.");
-            puts("Root Cookie: " + root_cookie);
+        if(passwords.length != 1){
+            error("'setroot' requires rootcookie in password field.");
         }
-        else if(passwords.length == 1){
-            root_cookie = passwords[0];
-            if(!root_cookie.match(ROOT_COOKIE_REGEX)){
-                puts(`Root cookie should have prefix ${ROOT_COOKIE_REGEX}`);
-                puts(`Followed by ${ID_LEN} alphanumeric characters, excluding, 0, O, and l.`);
-                error('Provided root cookie is not proper format. See output.');
-            }
-        }
-        else{
-            error("'rootcookie' expects at most 1 password field for rootcookie.");
+        root_cookie = passwords[0];
+        if(!root_cookie.match(ROOT_COOKIE_REGEX)){
+            puts(`Root cookie should have prefix ${ROOT_COOKIE_REGEX}`);
+            puts(`Followed by ${ID_LEN} alphanumeric characters, excluding, 0, O, and l.`);
+            error('Provided root cookie is not proper format. See output.');
         }
         site_cookie = sha256(app_state.site_id + root_cookie);
         createUser(app_state, user_state, site_cookie);

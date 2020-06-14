@@ -1,6 +1,7 @@
 
 const alphanum_regex = /^[A-Za-z0-9 ]*$/;
-const DEFAULT_CONFIG = "rows 28 cols 75 fg 000 bg fff";
+const DEFAULT_CONFIG = "rows 28 cols 75 fg 000 bg fff overflow auto";
+
 exports.DEFAULT_CONFIG = DEFAULT_CONFIG;
 // config command.
 exports.help = 

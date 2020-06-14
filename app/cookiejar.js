@@ -4,6 +4,7 @@ const shajs = require('sha.js');
 function sha256(s){
     return new shajs('sha256').update(s).digest('base64');
 }
+
 // TODO handle arbitrary precision integer strings.
 // TODO use a proper database instead of 'app_state', for scalability.
 
@@ -368,7 +369,7 @@ function cookieJarApp(args, call, data){
         else if(action == "backup"){
             puts("TODO write backup action.");
         }
-        else {
+        else if(action !== undefined){
             puts(HELP);
             error("Unknown action '" + action + "'.");
         }

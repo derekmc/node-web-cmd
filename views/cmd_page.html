@@ -38,10 +38,11 @@
         <% } %>
 
         <span style="float: right; margin-left: 1em;">User: <a href='./user/'><%= user_name %></a></span><br>
-        <textarea name="cmd_out"
+        <textarea id="cmd_out"
+                  name="cmd_out"
                   rows="<%= rows %>"
                   cols="<%= cols %>"
-                  readonly style="overflow: hidden; white-space: pre;"><%= cmd_out %>
+                  readonly style="overflow: <%= overflow %>; white-space: pre;"><%= cmd_out %>
         </textarea>
       </div>
       <!-- TODO: populate these values with template data -->
@@ -88,6 +89,8 @@
         var cmd_text = document.getElementById("cmd_text");
         cmd_text.addEventListener("keydown", keyDown);
         cmd_text.addEventListener("keydown", keyDown);
+        var cmd_out = document.getElementById("cmd_out");
+        cmd_out.scrollTop = cmd_out.scrollHeight;
         var cmd_input = document.getElementById("cmd_text");
         cmd_input.focus();
       }

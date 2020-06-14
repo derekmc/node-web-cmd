@@ -53,7 +53,6 @@ const T = require('value-types');
 //    const T = function(){ return arguments[arguments.length - 1]; }
 //}
 const express = require('express');
-const bcrypt = require('bcrypt');
 const http = require('http');
 const fs = require('fs');
 const qs = require('querystring');
@@ -647,7 +646,7 @@ async function cmdRequestHandler(request, response){
         puts("> " + cmd_text);
         // aliases match on just the first part of command.
         let args = cmd_text.split(/\s+/);
-        if(args[0] in Aliases){
+        if(page_data.app_name.length == 0 && args[0] in Aliases){
             cmd_text = Aliases[args[0]] + " " + args.slice(1).join(" ");
             args = cmd_text.split(/\s+/); }
         if(args[0] == "") args = [];
@@ -789,10 +788,14 @@ async function cmdRequestHandler(request, response){
         cmd_list = cmd_list.concat(getKeys(Aliases));
         cmd_list = cmd_list.concat(getKeys(Apps));
         template_data.cmd_list = cmd_list.join(' ');
+
         let cmd_out_lines = page_data.cmd_out.split("\n");
-        if(cmd_out_lines.length >= page_data.config.rows){
-            cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - page_data.config.rows + 1);
-        }
+
+        // if(false && page_data.config.overflow == "hide"){
+        //     if(cmd_out_lines.length >= page_data.config.rows){
+        //         cmd_out_lines = cmd_out_lines.slice(cmd_out_lines.length - page_data.config.rows + 1);
+        //     }
+        // }
         template_data.cmd_out = cmd_out_lines.join("\n");
         template_data.base_cmd_out = page_data.base_cmd_out;
         // console.log('cmd_hist', data.cmd_hist);

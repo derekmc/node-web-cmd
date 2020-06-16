@@ -1,6 +1,62 @@
 
+
+// TODO use big integer library for account balances, etc.
+// TODO use a proper database instead of 'app_state', for scalability.
+
+// root_cookie is a private cookie stored by each user.
+// site_id is a long, randomly generated identifier unique to this site.
+// root_cookies have a special prefix
+
+// site_cookie is the cookie token a user uses with a specific site.
+// site_cookie = hash(site_id + root_cookie).
+
+// backup_hash = hash(originating_site_cookie + destination_site_id + backup_version) // accounts cannot be linked to other backup versions.
+// account_hash = hash(currency_name + backup_hash)  // backup_hash is not revealed until users want to redeem their backed up accounts
+// the backup version is changed every time a specific destination
+//  site calls for a backup.
+// check_hash = hash(check_id + originating_site_id + destination_site_id + backup_version)
+
+// backups list balances associated with a hashed 'account_backup' identifier.
+// users must supply backup_hash to claim accounts
+//  on a remote site, which the remote site can use
+//  to identify all the associated account_backup's.
+// the currency on the remote site may be mapped to a different name or use a namespace.
+
+
+// user_state {site_cookie, user_id}
+// users may choose whether to store their root cookie on this site,
+// defaults to not.
+
+// Checks are used for transfering funds,
+//  originating or destination accounts.
+// app_state {site_cookies, users, checks, currencies, site_id} 
+// users {id: {site_cookie, action_log, accounts: {currency_name: balance}}}
+//   -- user action_log can be turned on of off, and is not backed up to other services.
+// checks {check_id: {currency_name, amount}}
+//  for debugging purposes, checks store 'from', and 'to' information as well as 'time1' and 'time2'.
+//  if debug is off, this information is omitted.
+//  if debug is off, checks are deleted as soon as they are redeemed.
+//  checks without 'to' have not been redeemed yet.
+// currencies {name: {owner_id, supply, locked}}
+// backup_versions {destination_site_id : {version_id}}
+// backups: {backup_version: {
+//     timestamp,
+//     originating_site_id,
+//     destination_site_id,
+//     // see notes at top of file for hash information.
+//     accounts: [{account_hash, balance}],
+//     checks: [{check_hash, currency_name, amount}],
+//  }}
+//  check_ids with 'issue:' prefix, mean it was issued directly into this account.
+//  if debug is off, no check_ids are stored.
+//
+// user_info.accounts 
+// TODO use site cookies to verify and backup.
+
 module.exports = cookieJarApp;
 const shajs = require('sha.js');
+const CURRENCY_REQUIRE_ADMIN = true; // require admin privileges to create a new currency(but not issue or lock)
+
 function sha256(s){
     return new shajs('sha256').update(s).digest('base64');
 }
@@ -72,58 +128,6 @@ function generateBackup(data, backup_info){
     return result;
 }
 
-// TODO handle arbitrary precision integer strings.
-// TODO use a proper database instead of 'app_state', for scalability.
-
-// root_cookie is a private cookie stored by each user.
-// site_id is a long, randomly generated identifier unique to this site.
-// root_cookies have a special prefix
-
-// site_cookie is the cookie token a user uses with a specific site.
-// site_cookie = hash(site_id + root_cookie).
-
-// backup_hash = hash(originating_site_cookie + destination_site_id + backup_version) // accounts cannot be linked to other backup versions.
-// account_hash = hash(currency_name + backup_hash)  // backup_hash is not revealed until users want to redeem their backed up accounts
-// the backup version is changed every time a specific destination
-//  site calls for a backup.
-// check_hash = hash(check_id + originating_site_id + destination_site_id + backup_version)
-
-// backups list balances associated with a hashed 'account_backup' identifier.
-// users must supply backup_hash to claim accounts
-//  on a remote site, which the remote site can use
-//  to identify all the associated account_backup's.
-// the currency on the remote site may be mapped to a different name or use a namespace.
-
-
-// user_state {site_cookie, user_id}
-// users may choose whether to store their root cookie on this site,
-// defaults to not.
-
-// Checks are used for transfering funds,
-//  originating or destination accounts.
-// app_state {site_cookies, users, checks, currencies, site_id} 
-// users {id: {site_cookie, action_log, accounts: {currency_name: balance}}}
-//   -- user action_log can be turned on of off, and is not backed up to other services.
-// checks {check_id: {currency_name, amount}}
-//  for debugging purposes, checks store 'from', and 'to' information as well as 'time1' and 'time2'.
-//  if debug is off, this information is omitted.
-//  if debug is off, checks are deleted as soon as they are redeemed.
-//  checks without 'to' have not been redeemed yet.
-// currencies {name: {owner_id, supply, locked}}
-// backup_versions {destination_site_id : {version_id}}
-// backups: {backup_version: {
-//     timestamp,
-//     originating_site_id,
-//     destination_site_id,
-//     // see notes at top of file for hash information.
-//     accounts: [{account_hash, balance}],
-//     checks: [{check_hash, currency_name, amount}],
-//  }}
-//  check_ids with 'issue:' prefix, mean it was issued directly into this account.
-//  if debug is off, no check_ids are stored.
-//
-// user_info.accounts 
-// TODO use site cookies to verify and backup.
 const GREETING =
 `CookieJar Digital Currency Exchange
 -- Speed, privacy, and decentralized anonymized backups --
@@ -146,8 +150,7 @@ Issuer Actions:
   lock (currency) - prevents issuing new supply of currency.
 
 User Actions:
-  newroot - Generates new rootcookie and sitecookie. (WARNING)
-  setroot - Uses rootcookie to set the sitecookie. (WARNING)
+  newuser - Generates new rootcookie and sitecookie. (WARNING)
   sitecookie - Sets the sitecookie.
   send (currency) (amount) - Create check for (amount) of (currency).
   accept (check_id) - Accept a check from another user.
@@ -333,7 +336,7 @@ function cookieJarApp(args, call, data){
             puts("No currencies created.");
         }
     }
-    else if(action == "newroot"){
+    else if(action == "newuser"){
         checkArgs(args);
 
         puts("Warning: It is recommended to use a 3rd party tool to handle rootcookies.");
@@ -346,7 +349,7 @@ function cookieJarApp(args, call, data){
         createUser(app_state, user_state, site_cookie);
         puts("Site Cookie: " + site_cookie);
     }
-    else if(action == "setroot"){
+    else if(false && action == "setroot"){
         checkArgs(args);
         // TODO remove this action entirely for security reasons, and prompt to use a 3rd party tool.
         puts("Warning: It is recommended to use a 3rd party tool to handle rootcookies.");
@@ -399,6 +402,9 @@ function cookieJarApp(args, call, data){
             let init_supply = args.length > 2? parseInt(args[2]) : 0;
             if(init_supply < 0 || isNaN(init_supply)){
                 error("'create' invalid supply: " + init_supply); }
+
+            if(CURRENCY_REQUIRE_ADMIN && !data.is_admin){
+                error("This server only allows admins to create new currencies."); }
 
             currencies[currency_name] = {issuer_user_id: user_id, supply: init_supply, locked: false};
             user_info.accounts[currency_name] = init_supply;
@@ -510,7 +516,6 @@ function cookieJarApp(args, call, data){
             
             let backup_data = generateBackup(app_state, backup_info);
             puts(JSON.stringify(backup_data));
-
             // puts("TODO write backup action.");
         }
         else if(action !== undefined){

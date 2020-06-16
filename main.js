@@ -37,8 +37,8 @@
 //
 // Command 'data' arguments ====
 //    user_info:
-//       null if not logged in, otherwise {user_id, user_name}.
-//       To create a new user, set this value to {user_name, password_salt, password_hash, password_hash_func}.
+//       null if not logged in, otherwise {user_id, username}.
+//       To create a new user, set this value to {username, password_salt, password_hash, password_hash_func}.
 //    user_config: the user's configuration for the terminal
 //    (TODO) session_config: the configuration is always based on the session.
 //    
@@ -338,7 +338,8 @@ async function getLoginData(request){
     let login_data = {
         session_cookie: "",
         user_id: GUEST_ID,
-        user_name: GUEST_NAME,
+        username: GUEST_NAME,
+        is_admin: false,
     };
     let request_cookies = parseCookies(request.headers['cookie']);
     if(request_cookies.hasOwnProperty(SESSION_COOKIE_NAME)){
@@ -347,8 +348,19 @@ async function getLoginData(request){
         if(!login_data.user_id){ // if lookup fails, clear session cookie and create new session.
             login_data.session_cookie = "";
             login_data.user_id = GUEST_ID; }
-        login_data.user_name = (login_data.user_id == GUEST_ID? GUEST_NAME : 
-            (await db.get(USER_INFOS + login_data.user_id)).username);
+        if(login_data.user_id == GUEST_ID){
+            login_data.username = GUEST_NAME;
+            login_data.is_admin = false;
+        } else {
+            let user_info = await db.get(USER_INFOS + login_data.user_id);
+            if(!user_info){
+                login_data.username = "";
+                login_data.is_admin = false;
+            } else {
+                login_data.username = user_info.username;
+                login_data.is_admin = user_info.is_admin;
+            }
+        }
     }
 
     return T(LoginData, login_data);
@@ -364,7 +376,7 @@ app.get('/about', async function(request, response){
     let template_data = {title: "About WebApp Terminal."};
 
     let login_data = T(LoginData, await getLoginData(request));
-    template_data.user_name = login_data.user_name;
+    template_data.username = login_data.username;
     template_data.logged_in = (login_data.user_id != GUEST_ID);
 
     let user_key = login_data.user_id;
@@ -473,7 +485,8 @@ async function userRequestHandler(request, response){
         let template_data = {title: "Login/Logout Page."};
 
         let login_data = T(LoginData, await getLoginData(request));
-        template_data.user_name = login_data.user_name;
+        template_data.username = login_data.username;
+        template_data.is_admin = login_data.is_admin;
         template_data.logged_in = (login_data.user_id != GUEST_ID);
         template_data.form_error = form_error;
         template_data.form_message = form_message;
@@ -512,7 +525,7 @@ app.post('/', cmdRequestHandler);
 const LoginData = {
     session_cookie: "",
     user_id: "",
-    user_name: "",
+    username: "",
 }
 
 async function cmdRequestHandler(request, response){
@@ -521,7 +534,7 @@ async function cmdRequestHandler(request, response){
     let headers = {"Content-Type": "text/html"};
     let page_data = {
         "title": "WebApp Terminal (v0)",
-        "user_name": GUEST_NAME,
+        "username": GUEST_NAME,
         "config" : parseConfig(DEFAULT_CONFIG),
         "cmd_out" : DEFAULT_CMDOUT,
         "base_cmd_out" : "",
@@ -535,7 +548,7 @@ async function cmdRequestHandler(request, response){
     }
 
     
-    // Step 1 - Get session_cookie, user_id, and user_name.
+    // Step 1 - Get session_cookie, user_id, and username.
     Object.assign(page_data, await getLoginData(request));
 
     // Step 2 - Generate session_cookie if it does not exist.
@@ -726,7 +739,7 @@ async function cmdRequestHandler(request, response){
                 // console.log('cmd_data', cmd_data);
                 cmd_data.user_id = page_data.user_id;
                 cmd_data.user_key = page_data.user_key;
-                cmd_data.user_name = page_data.user_name;
+                cmd_data.username = page_data.username;
                 cmd_data.session_cookie = page_data.session_cookie;
                 for(let key in cmd_data.user_config){
                     page_data.config[key] = cmd_data.user_config[key];
@@ -744,7 +757,7 @@ async function cmdRequestHandler(request, response){
                     cmd_data.user_config = await db.get(USER_CONFIGS + cmd_data.user_key);
                     // console.log('cmd_data.user_config, default', cmd_data.user_config, DEFAULT_CONFIG);
                     cmd_data.user_config = mergeMap(parseConfig(DEFAULT_CONFIG), parseConfig(cmd_data.user_config));
-                    page_data.user_name = cmd_data.user_name;
+                    page_data.username = cmd_data.username;
                     page_data.is_admin = cmd_data.is_admin;
                     //page_data.config = cmd_data.user_config;
                 }
@@ -807,7 +820,7 @@ async function cmdRequestHandler(request, response){
         template_data.config = dumpConfig(page_data.config);
         template_data.app_name = page_data.app_name;
         template_data.app_state = page_data.app_state;
-        template_data.user_name = page_data.user_name;
+        template_data.username = page_data.username;
         template_data.is_admin = page_data.is_admin;
         // template_data.session_cookie = page_data.session_cookie;
 

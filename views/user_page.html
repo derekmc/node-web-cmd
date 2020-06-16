@@ -91,7 +91,7 @@
     <div class="forms_container" onclick="event.stopPropagation(); return null; ">
       <a href=".." style="float: right; text-decoration: none; color: #fff; user-select: none; background: #000; font-size: 115%; padding: 0.2em 0.45em; margin-right: -0.76em; margin-top: -0.11em;"
       > X </a>
-      <h1> Welcome, <%= user_name %>. </h1>
+      <h1> Welcome, <%= username %><% if(is_admin){ %>*<% } %>. </h1>
       <% if(form_error){ %>
         <p class="message_box error">
           <%= form_error %>
@@ -108,7 +108,7 @@
           <table class="vertical_form" cellspacing="0px" cellpadding="5">
             <tr>
               <td colspan="999" style="min-width: 300px;" class="form_title">
-                <div> User Logout </div>
+                <div> <% if(is_admin){ %>Admin<% } else { %>User<% } %> Logout </div>
               </td>
             </tr>
             <tr>
@@ -180,6 +180,7 @@
           </button>
         -->
       <% } %>
+      <% if(is_admin){ %><br>*Administrator Account<% } %>. </h1>
     </div>
   </body>
 </html>

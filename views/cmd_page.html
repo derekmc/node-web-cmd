@@ -37,7 +37,14 @@
            <a href="./about/"><%= title %></a>
         <% } %>
 
-        <span style="float: right; margin-left: 1em;">User: <a href='./user/'><%= user_name %></a></span><br>
+        <span style="float: right; margin-left: 1em;">
+            <% if(is_admin) { %>
+                Admin: 
+            <% } else {%>
+                User:
+            <% } %>
+           <a href='./user/'><%= user_name %></a>
+        </span><br>
         <textarea id="cmd_out"
                   name="cmd_out"
                   rows="<%= rows %>"

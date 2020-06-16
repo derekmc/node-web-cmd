@@ -1,6 +1,7 @@
 
 exports.command = userCmd;
 
+const bcrypt = require('bcrypt');
 const {
     GEN_NEW_USER,
     GUEST_ID,
@@ -13,9 +14,17 @@ const {
     USER_CONFIGS,
     USER_ID_LEN,
     SALT_ROUNDS,
+    ADMIN_PASSWORD_FILE
 } = require("../const.js");
 
-const bcrypt = require('bcrypt');
+const admin = require("../admin.js");
+const admin_file = ADMIN_PASSWORD_FILE;
+let admin_list = null;
+
+(async function(){
+    admin_list = await admin.listAdmins(admin_file);
+})();
+
 exports.help = 
   "User commands.\n" + 
   " Commands: \n" + 
@@ -55,20 +64,35 @@ async function userCmd(args, call, data){
             return false; }
         // check username
         let username = args[2].trim().toLowerCase();
+        let user_exists_msg = "'user new' user exists: '" + username + "'or reserved for admin.";
         let existing_user_id = await db.get(USER_NAMES + username);
         if(existing_user_id){
-            puts("'user new' user exists: '" + username + "'");
+            puts(user_exists_msg);
             return false; }
         if(passwords[0] != passwords[1]){
             puts("'user new' passwords do not match.");
             return false; }
-        if(passwords[0].length < PASSWORD_MINLENGTH){
+
+        let is_admin = admin_list != null && admin_list.includes(username);
+        if(is_admin){
+            let admin_password_match = await admin.checkAdmin(admin_file, username, passwords[0]);
+            if(!admin_password_match){
+                // A timing attack might be possible here to discover if there is a reserved admin account.
+                // this is a security concern.
+                puts(user_exists_msg);
+            }
+        }
+        else if(passwords[0].length < PASSWORD_MINLENGTH){
             puts("'user new' password too short. Must be " + PASSWORD_MINLENGTH + " characters.");
-            return false; }
+            return false;
+        }
         let password_hash = await bcrypt.hash(passwords[0], SALT_ROUNDS);
+        // a user is admin if and only if the admin login was set when the user account
+        // was created.
         let user_info = {
             username: username,
             password_hash: password_hash,
+            is_admin: is_admin,
         }
         let gen_id_args = {
             init: user_info,
@@ -88,29 +112,38 @@ async function userCmd(args, call, data){
     }
     if(acct_cmd == "login"){
         if(args.length != 3){
-            puts("'user login' too many or too few arguments, expected <username> only.");
+            puts("too many or too few arguments, expected <username> only.");
             return false; }
         if(data.user_id != GUEST_ID){
-            puts("'user login' You must logout before logging in as a different user.");
+            puts("You must logout before logging in as a different user.");
             return false; }
         if(passwords.length != 1){
-            puts("'user login' requires 1 password.");
+            puts("requires 1 password.");
             return false; }
 
         let username = args[2].trim().toLowerCase();
         let login_user_id = await db.get(USER_NAMES + username);
         if(!login_user_id){
-            puts("'user login' No such user '" + username + "'");
+            puts("No such user '" + username + "'");
             return false; }
         let user_info = await db.get(USER_INFOS + login_user_id);
         if(!user_info){
-            puts("'user login' Could not retrieve user info '" + username + "'");
+        
+            puts("Could not retrieve user info '" + username + "'");
             return false; }
         // the hash includes the salt.
         let password_match = await bcrypt.compare(passwords[0], user_info.password_hash);
         if(!password_match){
-            puts("'user login' Incorrect password for '" + username + "'");
+            puts("Incorrect password for '" + username + "'");
             return false; }
+        else if(user_info.is_admin){
+            let admin_password_match = await admin.checkAdmin(admin_file, username, passwords[0]);
+            if(!admin_password_match){
+                puts("admin password does not match user password.");
+                return false;
+            }
+            data.is_admin = true;
+        }
         let assign_keys = {
             usersession: USER_SESSIONS + login_user_id,
             oldsession: USER_SESSIONS + data.user_id,
@@ -137,6 +170,7 @@ async function userCmd(args, call, data){
         puts("Logged out.");
         data.user_name = "Guest";
         data.user_key = data.session_cookie;
+        data.is_admin = false;
         // data.user_config = await db.get(USER_CONFIGS + data.session_cookie);
         return true;
     }

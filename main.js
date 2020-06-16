@@ -311,7 +311,7 @@ function parseCookies(str){
 // sessions|session_cookie: user_id
 // user_config|user_id: config
 // user_sessions|user_id: [session_cookies]
-// user_info|user_id: {username, password_hash, salt}
+// user_info|user_id: {username, password_hash, is_admin}
 // app_data|app_name: { user_states : state } 
 //   
 // user_sessions
@@ -531,6 +531,7 @@ async function cmdRequestHandler(request, response){
         "session_cookie": "",
         "user_id": GUEST_ID,
         "user_key": "",
+        "is_admin" : false,
     }
 
     
@@ -557,6 +558,7 @@ async function cmdRequestHandler(request, response){
 
     let cmd_keys = { user_config: USER_CONFIGS + page_data.user_key, user_info: USER_INFOS + page_data.user_key, };
     let cmd_data = await db.get(cmd_keys);
+    page_data.is_admin = cmd_data.user_info? (cmd_data.user_info.is_admin? true : false) : false;
     page_data.config = cmd_data.user_config = mergeMap(parseConfig(DEFAULT_CONFIG), parseConfig(cmd_data.user_config));
 
 
@@ -594,7 +596,6 @@ async function cmdRequestHandler(request, response){
                         break; }
                     page_data.passwords.push(formData[field_name]);
                 }
-                // console.log('remove this debugging only!!! Passwords: ' + page_data.passwords.join(', '));
                 // session token must match the allowed characters, but could otherwise be forged.
                 if(formData.cmd_out){
                     page_data.cmd_out = formData.cmd_out;
@@ -696,6 +697,7 @@ async function cmdRequestHandler(request, response){
                     data.entering_app = page_data.hasOwnProperty('entering_app')? page_data.entering_app : false;
                     data.user_key = page_data.user_key;
                     data.passwords = page_data.passwords;
+                    data.is_admin = page_data.is_admin;
                     let result = null;
                     try{
                         result = await Apps[page_data.app_name](args, {puts: puts, db: key_db}, data);
@@ -730,6 +732,7 @@ async function cmdRequestHandler(request, response){
                     page_data.config[key] = cmd_data.user_config[key];
                 }
                 cmd_data.passwords = page_data.passwords;
+                cmd_data.is_admin = page_data.is_admin;
 
                 let cmd_result = await Commands[cmd](args, {puts: _puts, db: db}, cmd_data);
                 //puts("Command finished.");
@@ -742,6 +745,7 @@ async function cmdRequestHandler(request, response){
                     // console.log('cmd_data.user_config, default', cmd_data.user_config, DEFAULT_CONFIG);
                     cmd_data.user_config = mergeMap(parseConfig(DEFAULT_CONFIG), parseConfig(cmd_data.user_config));
                     page_data.user_name = cmd_data.user_name;
+                    page_data.is_admin = cmd_data.is_admin;
                     //page_data.config = cmd_data.user_config;
                 }
                 if(cmd_data.user_config){
@@ -804,6 +808,7 @@ async function cmdRequestHandler(request, response){
         template_data.app_name = page_data.app_name;
         template_data.app_state = page_data.app_state;
         template_data.user_name = page_data.user_name;
+        template_data.is_admin = page_data.is_admin;
         // template_data.session_cookie = page_data.session_cookie;
 
         // add config vars to rendering data context.

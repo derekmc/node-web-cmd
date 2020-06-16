@@ -27,6 +27,8 @@ exports.PASSWORD_MINLENGTH = 1;
 exports.PASSWORD_SALT_LEN = 10;
 exports.SALT_ROUNDS = 10;
 exports.SESSION_COOKIE_NAME = "SessionCookie";
-exports.GUEST_ID = "|GUEST|";
+exports.GUEST_ID = "|GUEST|"; // uses session cookie as user_key
+exports.ADMIN_ID = "|ADMIN|"; // uses username as user_key
 exports.GUEST_NAME = "Guest";
+exports.ADMIN_PASSWORD_FILE = "admin_passwords.txt";
 

@@ -798,7 +798,10 @@ async function cmdRequestHandler(request, response){
     function cmdPage(page_data){
         let template_data = {};
 
-        template_data.title = page_data.title;
+        if(page_data.app_name.length){
+            template_data.title = "'" + page_data.app_name + "' WebCommand"; }
+        else{
+            template_data.title = page_data.title; }
 
         let cmd_list = [];
         cmd_list = cmd_list.concat(getKeys(Commands));

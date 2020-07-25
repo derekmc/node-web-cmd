@@ -382,7 +382,7 @@ function cookieJarApp(args, call, data){
         createUser(app_state, user_state, site_cookie);
     }
     else if(site_cookie === null || site_cookie == ""){
-        error("You must set sitecookie before performing user or issuer actions.");
+        error("You must set sitecookie before performing user or issuer actions.\n Call 'newuser', 'sitecookie', or 'rootcookie'.");
     }
     else {
         // user and issuer actions. user_id required.
